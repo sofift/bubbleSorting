@@ -1,9 +1,9 @@
 package it.unical.informatica.model;
 
 public enum Difficolta {
-    EASY(6, 4, 4, 5),       // 6 tubi, 4 colori, capacità 4, 5 livelli
-    MEDIUM(7, 5, 4, 5),     // 7 tubi, 5 colori
-    HARD(9, 7, 4, 5);       // 9 tubi, 7 colori
+    FACILE(6, 4, 4, 5),       // 6 tubi, 4 colori, capacità 4, 5 livelli
+    MEDIO(7, 5, 4, 5),     // 7 tubi, 5 colori
+    DIFFICILE(9, 7, 4, 5);       // 9 tubi, 7 colori
 
     public final int tubes;       // T
     public final int colors;      // C
@@ -41,9 +41,9 @@ public enum Difficolta {
     @Override
     public String toString() {
         switch (this) {
-            case EASY: return "Facile";
-            case MEDIUM: return "Medio";
-            case HARD: return "Difficile";
+            case FACILE: return "Facile";
+            case MEDIO: return "Medio";
+            case DIFFICILE: return "Difficile";
             default: return name();
         }
     }

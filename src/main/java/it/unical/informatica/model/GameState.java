@@ -434,6 +434,23 @@ public class GameState {
             System.err.println("Errore nella pulizia: " + e.getMessage());
         }
     }
+    public static GameState fromTubes(List<Tube> tubeList) {
+        GameState gs = new GameState();   // usa il costruttore privato vuoto già presente
+        gs.level = null;                  // nessuna info di livello (coerente con LevelGenerator)
+        gs.currentLevelNumber = 0;
+        gs.moves = 0;
+        gs.gameWon = false;
+
+        gs.tubes.clear();
+        if (tubeList != null) {
+            for (Tube t : tubeList) {
+                gs.tubes.add(t.copy());   // copia difensiva
+            }
+        }
+
+        gs.checkWinCondition();
+        return gs;
+    }
 
     /**
      * Classe interna per rappresentare una mossa

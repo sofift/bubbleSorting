@@ -1,142 +1,75 @@
 package it.unical.informatica.model;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Generatore semplice di livelli per il gioco Bubble Sorting
+ * Generatore livelli per Bubble Sorting, coerente con:
+ * - Tube(int id, int capacity)
+ * - Tube.addBall(Ball)
+ * - Ball(Color color, int id)   <-- vedi copy() nella tua Tube
  */
-public class LevelGenerator {
+public final class LevelGenerator {
 
-    private final Random random;
+    /** Capacità fissa dei tubi (Ball Sort classico) */
+    private static final int CAP = 4;
 
-    public LevelGenerator() {
-        this.random = new Random();
-    }
+    LevelGenerator() { }
 
     /**
-     * Genera un livello deterministico basato su difficoltà e numero livello
+     * Genera un GameState casuale in base alla difficoltà:
+     * FACILE:  K=4 colori,   T=6 tubi (4 pieni + 2 vuoti)
+     * MEDIO:   K=5 colori,   T=7 tubi (5 pieni + 2 vuoti)
+     * DIFFICILE: K=7 colori, T=9 tubi (7 pieni + 2 vuoti)
      */
-    public List<Tube> generateLevel(GameLevel difficulty, int levelNumber) {
-        // Seed deterministico per ogni livello
-        long seed = (difficulty.name().hashCode() * 31L) + levelNumber;
-        random.setSeed(seed);
+    public static GameState generate(Difficolta diff) {
+        int colors;
+        int tubes;
 
-        // Crea i tubi vuoti
-        List<Tube> tubes = new ArrayList<>();
-        for (int i = 0; i < difficulty.getNumberOfTubes(); i++) {
-            tubes.add(new Tube(i, difficulty.getTubeCapacity()));
+        switch (diff) {
+            case FACILE    -> { colors = 4; tubes = 6; }
+            case MEDIO     -> { colors = 5; tubes = 7; }
+            case DIFFICILE -> { colors = 7; tubes = 9; }
+            default -> throw new IllegalArgumentException("Difficoltà non valida: " + diff);
         }
 
-        // Crea tutte le palline
-        List<Ball> allBalls = createAllBalls(difficulty);
+        // 1) pool di colori: per ogni colore c, CAP palline
+        List<Integer> pool = new ArrayList<>(colors * CAP);
+        for (int c = 0; c < colors; c++) {
+            for (int i = 0; i < CAP; i++) pool.add(c);
+        }
+        Collections.shuffle(pool, ThreadLocalRandom.current());
 
-        // Mescola le palline
-        Collections.shuffle(allBalls, random);
+        // 2) crea i tubi (id 1..tubes, capacità CAP)
+        List<Tube> ts = new ArrayList<>(tubes);
+        for (int t = 0; t < tubes; t++) {
+            ts.add(new Tube(t + 1, CAP));
+        }
 
-        // Distribuisce le palline (lascia alcuni tubi vuoti)
-        int tubesWithBalls = difficulty.getNumberOfColors();
-        distributeBalls(tubes, allBalls, tubesWithBalls, levelNumber);
-
-        return tubes;
-    }
-
-    /**
-     * Crea tutte le palline necessarie per il livello
-     */
-    private List<Ball> createAllBalls(GameLevel difficulty) {
-        List<Ball> balls = new ArrayList<>();
-        Ball.Color[] colors = difficulty.getAvailableColors();
-        int ballId = 0;
-
-        // Crea le palline per ogni colore
-        for (int colorIndex = 0; colorIndex < difficulty.getNumberOfColors(); colorIndex++) {
-            Ball.Color color = colors[colorIndex];
-            for (int i = 0; i < difficulty.getBallsPerColor(); i++) {
-                balls.add(new Ball(color, ballId++));
+        // 3) riempi i primi 'colors' tubi con 4 palline ciascuno; gli ultimi 2 restano vuoti
+        int idx = 0;
+        int nextBallId = 1; // id progressivo per coerenza con Ball(color, id)
+        for (int t = 0; t < colors; t++) {
+            Tube tube = ts.get(t);
+            for (int p = 0; p < CAP; p++) {
+                int colorIndex = pool.get(idx++);
+                Ball.Color colorEnum = Ball.Color.values()[colorIndex];
+                tube.addBall(new Ball(colorEnum, nextBallId++));
             }
         }
 
-        return balls;
+        // 4) restituisci lo stato di gioco
+        // Se esiste il factory 'fromTubes', usa questa riga:
+        return GameState.fromTubes(ts);
+
+        // Se NON hai GameState.fromTubes(List<Tube>), puoi creare un aiutino statico nel GameState
+        // o, in emergenza, aggiungere in GameState un costruttore che accetti i tubi.
+        // Esempio temporaneo (da usare solo se il factory manca):
+        // GameState gs = new GameState(/* difficoltà/level come serve a te */);
+        // gs.setTubes(ts); return gs;
     }
 
-    /**
-     * Distribuisce le palline nei tubi
-     */
-    private void distributeBalls(List<Tube> tubes, List<Ball> balls, int tubesWithBalls, int levelNumber) {
-        int ballIndex = 0;
-
-        // Calcola la complessità del livello (più alto = più mescolato)
-        double complexity = 0.3 + (levelNumber * 0.15); // da 0.45 a 1.05
-
-        for (int tubeIndex = 0; tubeIndex < tubesWithBalls && ballIndex < balls.size(); tubeIndex++) {
-            Tube tube = tubes.get(tubeIndex);
-
-            // Determina quante palline mettere in questo tubo
-            int ballsForThisTube = calculateBallsForTube(ballIndex, balls.size(),
-                    tubesWithBalls - tubeIndex,
-                    tube.getCapacity(), complexity);
-
-            // Aggiungi le palline al tubo
-            for (int i = 0; i < ballsForThisTube && ballIndex < balls.size(); i++) {
-                tube.addBall(balls.get(ballIndex++));
-            }
-        }
-    }
-
-    /**
-     * Calcola quante palline mettere in un tubo
-     */
-    private int calculateBallsForTube(int ballsUsed, int totalBalls, int tubesRemaining,
-                                      int tubeCapacity, double complexity) {
-        if (tubesRemaining == 1) {
-            // Ultimo tubo: metti tutte le palline rimaste
-            return Math.min(totalBalls - ballsUsed, tubeCapacity);
-        }
-
-        int ballsLeft = totalBalls - ballsUsed;
-        int avgBalls = ballsLeft / tubesRemaining;
-
-        // Aggiungi variazione basata sulla complessità
-        int variation = Math.max(1, (int)(avgBalls * complexity * 0.5));
-        int minBalls = Math.max(1, avgBalls - variation);
-        int maxBalls = Math.min(tubeCapacity, avgBalls + variation);
-
-        return minBalls + random.nextInt(Math.max(1, maxBalls - minBalls + 1));
-    }
-
-    /**
-     * Genera un livello semplice per testing
-     */
-    public List<Tube> generateSimpleLevel(GameLevel difficulty) {
-        List<Tube> tubes = new ArrayList<>();
-        for (int i = 0; i < difficulty.getNumberOfTubes(); i++) {
-            tubes.add(new Tube(i, difficulty.getTubeCapacity()));
-        }
-
-        Ball.Color[] colors = difficulty.getAvailableColors();
-        int ballId = 0;
-
-        // Riempi ogni tubo con un colore diverso
-        for (int colorIndex = 0; colorIndex < difficulty.getNumberOfColors(); colorIndex++) {
-            Tube tube = tubes.get(colorIndex);
-            Ball.Color color = colors[colorIndex];
-
-            for (int i = 0; i < difficulty.getBallsPerColor(); i++) {
-                tube.addBall(new Ball(color, ballId++));
-            }
-        }
-
-        // Mescola solo la prima pallina di alcuni tubi per renderlo interessante
-        if (tubes.size() > 1) {
-            Tube firstTube = tubes.get(0);
-            Tube secondTube = tubes.get(1);
-
-            if (!firstTube.isEmpty() && !secondTube.isFull()) {
-                Ball ball = firstTube.removeBall();
-                secondTube.addBall(ball);
-            }
-        }
-
-        return tubes;
-    }
+    public static int getCapacity() { return CAP; }
 }

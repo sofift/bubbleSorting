@@ -1,16 +1,22 @@
 package it.unical.informatica.controller;
 
 import it.unical.informatica.asp.AspSolver;
-import javafx.stage.Stage;
-import javafx.application.Platform;
-import javafx.concurrent.Task;
-import it.unical.informatica.model.*;
+import it.unical.informatica.model.GameLevel;
+import it.unical.informatica.model.GameState;
 import it.unical.informatica.view.GameView;
+import javafx.animation.PauseTransition;
+import javafx.application.Platform;
+import javafx.concurrent.Service;
+import javafx.concurrent.Task;
+import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.util.List;
 
 /**
- * Controller principale del gioco - VERSIONE CORRETTA
+ * Controller principale del gioco - versione semplificata con Task/Service.
+ * - Tutte le operazioni pesanti (ASP) girano in background con Service.
+ * - La UI viene aggiornata SOLO in callback di successo/fallimento (FX thread).
  */
 public class GameController {
 
@@ -24,437 +30,273 @@ public class GameController {
     private AspSolver aspSolver;
 
     // Stato del controller
-    private boolean isProcessingMove;
-    private boolean isShowingHint;
+    private boolean isProcessingMove = false;
+    private boolean isShowingHint = false;
 
-    /**
-     * ✅ COSTRUTTORE SENZA ECCEZIONI OBBLIGATORIE
-     */
+    // Services (riusabili)
+    private HintService hintService;
+    private SolveService solveService;
+
+    // -------------------- COSTRUTTORE --------------------
     public GameController(Stage primaryStage, MenuController menuController,
                           GameLevel gameLevel, int levelNumber) {
         this.primaryStage = primaryStage;
         this.menuController = menuController;
         this.gameLevel = gameLevel;
         this.levelNumber = levelNumber;
-        this.isProcessingMove = false;
-        this.isShowingHint = false;
-
-        // ✅ Inizializza i componenti con gestione errori
         initializeComponents();
     }
 
-    /**
-     * ✅ Inizializza i componenti del gioco con gestione errori robusta
-     */
+    // -------------------- INIT --------------------
     private void initializeComponents() {
         try {
-            System.out.println("🚀 Inizializzando GameController...");
-
-            // Crea il nuovo stato del gioco
-            System.out.println("📝 Creando GameState...");
             gameState = new GameState(gameLevel, levelNumber);
-            System.out.println("✅ GameState creato correttamente");
-
-            // Crea la vista del gioco
-            System.out.println("🎨 Creando GameView...");
             gameView = new GameView(gameLevel);
-            System.out.println("✅ GameView creata correttamente");
+            aspSolver = new AspSolver();
 
-            // Inizializza il solver ASP (con gestione errori)
-            System.out.println("🧠 Inizializzando AspSolver...");
-            aspSolver = new AspSolver(); // ✅ NON lancia eccezioni
-            System.out.println("✅ AspSolver inizializzato");
-
-            // Configura gli event handlers
-            System.out.println("🔧 Configurando event handlers...");
             setupEventHandlers();
-            System.out.println("✅ Event handlers configurati");
-
-            // Aggiorna la vista con lo stato iniziale
-            System.out.println("🔄 Aggiornando vista iniziale...");
             updateView();
-            System.out.println("✅ GameController inizializzato correttamente");
+
+            // Inizializza i servizi
+            hintService = new HintService();
+            solveService = new SolveService();
 
         } catch (Exception e) {
-            System.err.println("❌ ERRORE nell'inizializzazione del GameController: " + e.getMessage());
             e.printStackTrace();
-
-            // ✅ FALLBACK: Crea componenti minimi per evitare crash
             createMinimalFallback();
         }
     }
 
-    /**
-     * ✅ Crea componenti minimi in caso di errore
-     */
     private void createMinimalFallback() {
         try {
-            System.out.println("🆘 Attivando modalità fallback...");
-
-            if (gameState == null) {
-                // Crea GameState semplice senza generatore
-                gameState = GameState.createTestLevel(gameLevel, levelNumber);
-            }
-
-            if (gameView == null) {
-                gameView = new GameView(gameLevel);
-            }
-
-            if (aspSolver == null) {
-                aspSolver = new AspSolver();
-            }
+            if (gameState == null) gameState = GameState.createTestLevel(gameLevel, levelNumber);
+            if (gameView == null)  gameView  = new GameView(gameLevel);
+            if (aspSolver == null) aspSolver = new AspSolver();
 
             setupEventHandlers();
             updateView();
 
-            System.out.println("✅ Modalità fallback attivata");
+            hintService = new HintService();
+            solveService = new SolveService();
 
-        } catch (Exception fallbackError) {
-            System.err.println("💥 ERRORE CRITICO nel fallback: " + fallbackError.getMessage());
-            // In questo caso estremo, mostra un messaggio di errore
-            showCriticalError(fallbackError);
+        } catch (Exception ex) {
+            showCriticalError(ex);
         }
     }
 
-    /**
-     * ✅ Mostra errore critico all'utente
-     */
     private void showCriticalError(Exception e) {
         Platform.runLater(() -> {
-            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR);
+            var alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.ERROR);
             alert.setTitle("Errore Critico");
             alert.setHeaderText("Impossibile inizializzare il gioco");
-            alert.setContentText("Errore: " + e.getMessage() + "\n\nTornando al menu principale...");
+            alert.setContentText(e.getMessage());
             alert.showAndWait();
-
-            // Torna al menu
-            if (menuController != null) {
-                menuController.returnToMenu();
-            }
+            if (menuController != null) menuController.returnToMenu();
         });
     }
 
-    /**
-     * Configura gli event handlers per la vista
-     */
+    // -------------------- EVENTI UI --------------------
     private void setupEventHandlers() {
         if (gameView == null) return;
 
-        // Handler per i click sui tubi
         gameView.setOnTubeClicked(this::handleTubeClick);
-
-        // Handler per il pulsante restart
-        gameView.setOnRestartRequested(() -> {
-            try {
-                restartGame();
-            } catch (Exception e) {
-                System.err.println("Errore nel restart: " + e.getMessage());
-            }
-        });
-
-        // Handler per il pulsante menu
-        gameView.setOnMenuRequested(() -> {
-            try {
-                returnToMenu();
-            } catch (Exception e) {
-                System.err.println("Errore nel ritorno al menu: " + e.getMessage());
-            }
-        });
-
-        // Handler per il pulsante hint
-        gameView.setOnHintRequested(() -> {
-            try {
-                showHint();
-            } catch (Exception e) {
-                System.err.println("Errore nel suggerimento: " + e.getMessage());
-            }
-        });
-
-        // Handler per il pulsante solve
-        gameView.setOnSolveRequested(() -> {
-            try {
-                solveAutomatically();
-            } catch (Exception e) {
-                System.err.println("Errore nella risoluzione automatica: " + e.getMessage());
-            }
-        });
-
-        // Handler per undo
-        gameView.setOnUndoRequested(() -> {
-            try {
-                undoLastMove();
-            } catch (Exception e) {
-                System.err.println("Errore nell'undo: " + e.getMessage());
-            }
-        });
+        gameView.setOnRestartRequested(this::restartGame);
+        gameView.setOnMenuRequested(this::returnToMenu);
+        gameView.setOnHintRequested(this::showHint);
+        gameView.setOnSolveRequested(this::solveAutomatically);
+        gameView.setOnUndoRequested(this::undoLastMove);
     }
 
-    /**
-     * Avvia il gioco
-     */
     public void startGame() {
         try {
             if (gameView == null || gameView.getScene() == null) {
-                System.err.println("❌ GameView non inizializzata correttamente");
                 returnToMenu();
                 return;
             }
-
             primaryStage.setScene(gameView.getScene());
             primaryStage.setTitle("Bubble Sorting Game - " + gameLevel.getDisplayName() +
                     " Livello " + levelNumber);
-
-            System.out.println("✅ Gioco avviato correttamente");
         } catch (Exception e) {
-            System.err.println("❌ Errore nell'avvio del gioco: " + e.getMessage());
             returnToMenu();
         }
     }
 
-    /**
-     * Gestisce il click su un tubo
-     */
     private void handleTubeClick(int tubeId) {
-        try {
-            if (isProcessingMove || gameState.isGameWon()) {
-                return;
-            }
-
-            System.out.println("Click su tubo: " + tubeId);
-            gameView.handleTubeSelection(tubeId, gameState);
-        } catch (Exception e) {
-            System.err.println("Errore nel click del tubo: " + e.getMessage());
-        }
+        if (isProcessingMove || gameState.isGameWon()) return;
+        gameView.handleTubeSelection(tubeId, gameState);
     }
 
-    /**
-     * Aggiorna la vista con lo stato corrente del gioco
-     */
     private void updateView() {
-        try {
-            if (gameView != null && gameState != null) {
-                gameView.updateGameState(gameState);
-            }
-        } catch (Exception e) {
-            System.err.println("Errore nell'aggiornamento della vista: " + e.getMessage());
-        }
+        if (gameView != null && gameState != null) gameView.updateGameState(gameState);
     }
 
-    /**
-     * Passa al livello successivo
-     */
     private void nextLevel() {
         try {
             if (levelNumber < 5) {
-                GameController nextController = new GameController(
-                        primaryStage, menuController, gameLevel, levelNumber + 1);
-                nextController.startGame();
+                GameController next = new GameController(primaryStage, menuController, gameLevel, levelNumber + 1);
+                next.startGame();
             } else {
-                gameView.showCompletionDialog(() -> returnToMenu());
+                gameView.showCompletionDialog(this::returnToMenu);
             }
-        } catch (Exception e) {
-            System.err.println("Errore nel passaggio al livello successivo: " + e.getMessage());
-        }
+        } catch (Exception ignored) {}
     }
 
-    /**
-     * Riavvia il livello corrente
-     */
     private void restartGame() {
         try {
             gameState = new GameState(gameLevel, levelNumber);
             gameView.resetView();
             updateView();
         } catch (Exception e) {
-            System.err.println("Errore nel restart del gioco: " + e.getMessage());
-            // In caso di errore, torna al menu
             returnToMenu();
         }
     }
 
-    /**
-     * Torna al menu principale
-     */
     private void returnToMenu() {
         try {
             menuController.returnToMenu();
-        } catch (Exception e) {
-            System.err.println("Errore nel ritorno al menu: " + e.getMessage());
-        }
+        } catch (Exception ignored) {}
     }
 
-    /**
-     * Mostra un hint per la prossima mossa
-     */
+    // -------------------- HINT (Service) --------------------
     private void showHint() {
-        if (isShowingHint || gameState.isGameWon() || aspSolver == null) {
-            return;
-        }
+        if (isShowingHint || gameState.isGameWon() || aspSolver == null) return;
 
+        // configura il service sullo stato corrente
+        hintService.restartWith(gameState);
+
+        // UI: loading on
         isShowingHint = true;
         gameView.showLoadingHint(true);
 
-        // Esegue il calcolo dell'hint in background
-        Task<GameState.Move> hintTask = new Task<GameState.Move>() {
-            @Override
-            protected GameState.Move call() throws Exception {
-                return aspSolver.findBestMove(gameState);
-            }
+        // callback successo/errore (girano su FX thread)
+        hintService.setOnSucceeded(ev -> {
+            GameState.Move hint = hintService.getValue();
+            gameView.showLoadingHint(false);
+            if (hint != null) gameView.highlightHint(hint.getFromTubeId(), hint.getToTubeId());
+            else gameView.showNoHintAvailable();
+            isShowingHint = false;
+        });
 
-            @Override
-            protected void succeeded() {
-                Platform.runLater(() -> {
-                    try {
-                        GameState.Move hint = getValue();
-                        gameView.showLoadingHint(false);
+        hintService.setOnFailed(ev -> {
+            gameView.showLoadingHint(false);
+            gameView.showHintError();
+            isShowingHint = false;
+        });
 
-                        if (hint != null) {
-                            gameView.highlightHint(hint.getFromTubeId(), hint.getToTubeId());
-                        } else {
-                            gameView.showNoHintAvailable();
-                        }
-
-                        isShowingHint = false;
-                    } catch (Exception e) {
-                        System.err.println("Errore nella gestione dell'hint: " + e.getMessage());
-                        isShowingHint = false;
-                    }
-                });
-            }
-
-            @Override
-            protected void failed() {
-                Platform.runLater(() -> {
-                    gameView.showLoadingHint(false);
-                    gameView.showHintError();
-                    isShowingHint = false;
-                });
-            }
-        };
-
-        Thread hintThread = new Thread(hintTask);
-        hintThread.setDaemon(true);
-        hintThread.start();
+        hintService.start();
     }
 
-    /**
-     * Risolve automaticamente il gioco
-     */
+    // -------------------- SOLVE (Service) --------------------
     private void solveAutomatically() {
-        if (isProcessingMove || gameState.isGameWon() || aspSolver == null) {
-            return;
-        }
+        if (isProcessingMove || gameState.isGameWon() || aspSolver == null) return;
+
+        solveService.restartWith(gameState);
 
         gameView.showLoadingSolution(true);
 
-        Task<List<GameState.Move>> solveTask = new Task<List<GameState.Move>>() {
-            @Override
-            protected List<GameState.Move> call() throws Exception {
-                return aspSolver.solveGame(gameState);
-            }
+        solveService.setOnSucceeded(ev -> {
+            List<GameState.Move> plan = solveService.getValue();
+            gameView.showLoadingSolution(false);
+            if (plan != null && !plan.isEmpty()) executeAutomaticSolution(plan);
+            else gameView.showNoSolutionFound();
+        });
 
-            @Override
-            protected void succeeded() {
-                Platform.runLater(() -> {
-                    try {
-                        List<GameState.Move> solution = getValue();
-                        gameView.showLoadingSolution(false);
+        solveService.setOnFailed(ev -> {
+            gameView.showLoadingSolution(false);
+            gameView.showSolutionError();
+        });
 
-                        if (solution != null && !solution.isEmpty()) {
-                            executeAutomaticSolution(solution);
-                        } else {
-                            gameView.showNoSolutionFound();
-                        }
-                    } catch (Exception e) {
-                        System.err.println("Errore nella gestione della soluzione: " + e.getMessage());
-                    }
-                });
-            }
-
-            @Override
-            protected void failed() {
-                Platform.runLater(() -> {
-                    gameView.showLoadingSolution(false);
-                    gameView.showSolutionError();
-                });
-            }
-        };
-
-        Thread solveThread = new Thread(solveTask);
-        solveThread.setDaemon(true);
-        solveThread.start();
+        solveService.start();
     }
 
-    /**
-     * Esegue automaticamente una sequenza di mosse
-     */
+    // -------------------- ESECUZIONE PIANO --------------------
     private void executeAutomaticSolution(List<GameState.Move> moves) {
-        if (moves.isEmpty()) {
-            return;
-        }
-
+        if (moves == null || moves.isEmpty()) return;
         isProcessingMove = true;
         executeMovesSequentially(moves, 0);
     }
 
-    /**
-     * Esegue le mosse in sequenza con animazioni
-     */
     private void executeMovesSequentially(List<GameState.Move> moves, int index) {
-        try {
-            if (index >= moves.size()) {
-                isProcessingMove = false;
-                return;
-            }
+        if (index >= moves.size()) { isProcessingMove = false; return; }
 
-            GameState.Move move = moves.get(index);
+        GameState.Move move = moves.get(index);
 
-            // Esegui la mossa nel modello
-            gameState.makeMove(move.getFromTubeId(), move.getToTubeId());
+        // aggiorna modello
+        gameState.makeMove(move.getFromTubeId(), move.getToTubeId());
 
-            // Anima la mossa
-            gameView.animateMove(move.getFromTubeId(), move.getToTubeId(), () -> {
-                updateView();
-
-                if (index == moves.size() - 1) {
-                    // Ultima mossa
-                    if (gameState.isGameWon()) {
-                        gameView.showWinAnimation(() -> {
-                            gameView.showWinDialog(gameState.getMoves(), this::nextLevel, this::restartGame);
-                        });
-                    }
-                    isProcessingMove = false;
-                } else {
-                    // Continua con la prossima mossa
-                    Platform.runLater(() -> {
-                        try {
-                            Thread.sleep(500);
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        }
-                        executeMovesSequentially(moves, index + 1);
-                    });
+        // anima e poi continua
+        gameView.animateMove(move.getFromTubeId(), move.getToTubeId(), () -> {
+            updateView();
+            if (index == moves.size() - 1) {
+                if (gameState.isGameWon()) {
+                    gameView.showWinAnimation(() ->
+                            gameView.showWinDialog(gameState.getMoves(), this::nextLevel, this::restartGame)
+                    );
                 }
-            });
-        } catch (Exception e) {
-            System.err.println("Errore nell'esecuzione delle mosse: " + e.getMessage());
-            isProcessingMove = false;
-        }
+                isProcessingMove = false;
+            } else {
+                // pausa senza bloccare il thread FX
+                PauseTransition pause = new PauseTransition(Duration.millis(400));
+                pause.setOnFinished(e -> executeMovesSequentially(moves, index + 1));
+                pause.play();
+            }
+        });
     }
 
-    /**
-     * Annulla l'ultima mossa (funzionalità bonus)
-     */
     private void undoLastMove() {
         gameView.showUndoNotAvailable();
     }
 
-    // Getters per testing
-    public GameState getGameState() {
-        return gameState;
+    // -------------------- SERVICES --------------------
+    /**
+     * Calcolo del suggerimento (una singola mossa) in background.
+     */
+    private class HintService extends Service<GameState.Move> {
+        private GameState source;
+
+        void restartWith(GameState gs) {
+            this.source = gs;
+            if (isRunning()) cancel();
+            reset();
+        }
+
+        @Override
+        protected Task<GameState.Move> createTask() {
+            GameState snapshot = source; // catturo riferimento
+            return new Task<>() {
+                @Override
+                protected GameState.Move call() throws Exception {
+                    return aspSolver.findBestMove(snapshot);
+                }
+            };
+        }
     }
 
-    public GameView getGameView() {
-        return gameView;
+    /**
+     * Calcolo del piano completo in background.
+     */
+    private class SolveService extends Service<List<GameState.Move>> {
+        private GameState source;
+
+        void restartWith(GameState gs) {
+            this.source = gs;
+            if (isRunning()) cancel();
+            reset();
+        }
+
+        @Override
+        protected Task<List<GameState.Move>> createTask() {
+            GameState snapshot = source; // catturo riferimento
+            return new Task<>() {
+                @Override
+                protected List<GameState.Move> call() throws Exception {
+                    return aspSolver.solveGame(snapshot);
+                }
+            };
+        }
     }
+
+    // -------------------- GETTER (se servono ai test) --------------------
+    public GameState getGameState() { return gameState; }
+    public GameView getGameView() { return gameView; }
 }

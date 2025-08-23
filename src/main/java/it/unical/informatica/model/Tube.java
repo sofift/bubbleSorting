@@ -1,9 +1,14 @@
 package it.unical.informatica.model;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Stack;
 
 /**
- * Rappresenta un tubo che contiene le palline
+ * Rappresenta un tubo di capacità fissa che contiene palline.
+ * Convenzioni:
+ * - la "cima" del tubo è l'ultima pallina inserita (LIFO)
+ * - le mosse sono sempre dalla cima di un tubo alla cima di un altro
  */
 public class Tube {
 
@@ -17,86 +22,81 @@ public class Tube {
         this.balls = new Stack<>();
     }
 
-    /**
-     * Aggiunge una pallina in cima al tubo
-     */
+    /* ------------------- Operazioni base ------------------- */
+
+    /** Inserisce una pallina in cima. Ritorna false se il tubo è pieno. */
     public boolean addBall(Ball ball) {
-        if (isFull()) {
-            return false;
-        }
+        if (isFull() || ball == null) return false;
         balls.push(ball);
         return true;
     }
 
-    /**
-     * Rimuove e restituisce la pallina in cima al tubo
-     */
+    /** Rimuove e restituisce la pallina in cima (o null se vuoto). */
     public Ball removeBall() {
-        if (isEmpty()) {
-            return null;
-        }
-        return balls.pop();
+        return isEmpty() ? null : balls.pop();
     }
 
     /**
-     * Restituisce la pallina in cima senza rimuoverla
+     * Rimuove la pallina passata SOLO se è effettivamente la cima.
+     * Utile quando il chiamante ha già la reference alla top ball.
      */
+    public boolean removeBall(Ball ball) {
+        if (ball == null || isEmpty()) return false;
+        if (balls.peek() != ball) return false;
+        balls.pop();
+        return true;
+    }
+
+    /** Restituisce la pallina in cima senza rimuoverla (o null se vuoto). */
     public Ball getTopBall() {
-        if (isEmpty()) {
-            return null;
-        }
-        return balls.peek();
+        return isEmpty() ? null : balls.peek();
     }
 
-    /**
-     * Verifica se il tubo è vuoto
-     */
+    /* ------------------- Predicati di stato ------------------- */
+
     public boolean isEmpty() {
         return balls.isEmpty();
     }
 
-    /**
-     * Verifica se il tubo è pieno
-     */
     public boolean isFull() {
         return balls.size() >= capacity;
     }
 
-    /**
-     * Verifica se tutte le palline nel tubo sono dello stesso colore
-     */
+    /** True se tutte le palline presenti hanno lo stesso colore (0/1 pallina => true). */
     public boolean isMonochromatic() {
-        if (isEmpty()) {
-            return true;
+        int n = balls.size();
+        if (n <= 1) return true;
+        Ball.Color first = balls.get(0).getColor();
+        for (int i = 1; i < n; i++) {
+            if (balls.get(i).getColor() != first) return false;
         }
-
-        Ball.Color firstColor = balls.get(0).getColor();
-        return balls.stream().allMatch(ball -> ball.getColor() == firstColor);
+        return true;
     }
 
-    /**
-     * Verifica se il tubo è completo (pieno e monocromatico)
-     */
+    /** Pieno e monocromatico. */
     public boolean isComplete() {
         return isFull() && isMonochromatic();
     }
 
     /**
-     * Verifica se è possibile spostare una pallina da questo tubo a quello di destinazione
+     * Verifica se è possibile spostare una pallina da questo tubo al "destination".
+     * Regole del gioco:
+     * - non puoi muovere da un tubo vuoto
+     * - non puoi muovere verso un tubo pieno
+     * - puoi muovere su un tubo vuoto
+     * - altrimenti, il colore della cima del destination deve essere uguale alla cima di questo
      */
     public boolean canMoveTo(Tube destination) {
-        if (this.isEmpty() || destination.isFull()) {
-            return false;
-        }
+        if (destination == null) return false;
+        if (this.isEmpty() || destination.isFull()) return false;
+        if (destination.isEmpty()) return true;
 
-        // Se il tubo di destinazione è vuoto, è sempre possibile spostare
-        if (destination.isEmpty()) {
-            return true;
-        }
-
-        // Altrimenti, la pallina in cima deve essere dello stesso colore
-        return this.getTopBall().getColor() == destination.getTopBall().getColor();
+        Ball topSrc = this.getTopBall();
+        Ball topDst = destination.getTopBall();
+        return topSrc != null && topDst != null && topSrc.getColor() == topDst.getColor();
     }
+
+    /* ------------------- Accessori ------------------- */
 
     public int getId() {
         return id;
@@ -106,28 +106,28 @@ public class Tube {
         return capacity;
     }
 
+    /** Numero di palline attualmente nel tubo. */
     public int getCurrentSize() {
         return balls.size();
     }
 
+    /** Copia difensiva dell'elenco palline (ordine dal fondo alla cima). */
     public List<Ball> getBalls() {
         return new ArrayList<>(balls);
     }
 
-    /**
-     * Crea una copia del tubo
-     */
+    /** Crea una copia profonda del tubo (stesso id/capacità, palline duplicate). */
     public Tube copy() {
         Tube copy = new Tube(this.id, this.capacity);
-        for (Ball ball : this.balls) {
-            copy.addBall(new Ball(ball.getColor(), ball.getId()));
+        // manteniamo l'ordine dal fondo alla cima
+        for (Ball b : this.balls) {
+            copy.addBall(new Ball(b.getColor(), b.getId()));
         }
         return copy;
     }
 
     @Override
     public String toString() {
-        return String.format("Tube{id=%d, capacity=%d, balls=%s}",
-                id, capacity, balls);
+        return "Tube{id=" + id + ", capacity=" + capacity + ", balls=" + balls + '}';
     }
 }
