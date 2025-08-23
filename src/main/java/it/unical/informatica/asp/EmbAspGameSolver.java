@@ -7,8 +7,11 @@ import it.unical.informatica.model.Ball;
 import it.unical.mat.embasp.base.Handler;
 import it.unical.mat.embasp.base.InputProgram;
 import it.unical.mat.embasp.base.OptionDescriptor;
+import it.unical.mat.embasp.base.Output;
+import it.unical.mat.embasp.languages.Id;
 import it.unical.mat.embasp.languages.IllegalAnnotationException;
 import it.unical.mat.embasp.languages.ObjectNotValidException;
+import it.unical.mat.embasp.languages.Param;
 import it.unical.mat.embasp.languages.asp.ASPInputProgram;
 import it.unical.mat.embasp.languages.asp.ASPMapper;
 import it.unical.mat.embasp.languages.asp.AnswerSet;
@@ -16,10 +19,11 @@ import it.unical.mat.embasp.languages.asp.AnswerSets;
 import it.unical.mat.embasp.platforms.desktop.DesktopHandler;
 import it.unical.mat.embasp.specializations.dlv2.desktop.DLV2DesktopService;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
 /**
- * Classe per risolvere automaticamente il gioco usando embASP con DLV2
+ * Classe per risolvere automaticamente il gioco usando embASP con DLV2 - VERSIONE CORRETTA
  */
 public class EmbAspGameSolver {
 
@@ -29,11 +33,11 @@ public class EmbAspGameSolver {
     private final Handler handler;
     private final ASPMapper mapper;
 
-    public EmbAspGameSolver() throws ObjectNotValidException, IllegalAnnotationException {
+    public EmbAspGameSolver() {
         // Inizializza handler per DLV2
         this.handler = new DesktopHandler(new DLV2DesktopService(DLV2_PATH));
 
-        // Inizializza mapper
+        // Inizializza mapper usando getInstance()
         this.mapper = ASPMapper.getInstance();
         setupMapper();
     }
@@ -41,14 +45,16 @@ public class EmbAspGameSolver {
     /**
      * Configura il mapper per il mapping automatico
      */
-    private void setupMapper() throws ObjectNotValidException, IllegalAnnotationException {
-        // Registra le classi per il mapping
-        mapper.registerClass(EmbAspLevelChecker.GameParameterFact.class);
-        mapper.registerClass(EmbAspLevelChecker.TubeFact.class);
-        mapper.registerClass(EmbAspLevelChecker.BallFact.class);
-        mapper.registerClass(EmbAspLevelChecker.ColorFact.class);
-        mapper.registerClass(MoveFact.class);
-        mapper.registerClass(SolutionStepFact.class);
+    private void setupMapper() {
+        try {
+            // Registra le classi per il mapping
+            mapper.registerClass(EmbAspLevelChecker.TubeFact.class);
+            mapper.registerClass(EmbAspLevelChecker.BallFact.class);
+            mapper.registerClass(EmbAspLevelChecker.ColorFact.class);
+            mapper.registerClass(MoveFact.class);
+        } catch (ObjectNotValidException | IllegalAnnotationException e) {
+            System.err.println("Errore nel setup mapper solver: " + e.getMessage());
+        }
     }
 
     /**
@@ -60,17 +66,21 @@ public class EmbAspGameSolver {
             InputProgram program = new ASPInputProgram();
             program.addFilesPath(GAME_SOLVER_PROGRAM);
 
-            // Converti GameState in fatti ASP
-            List<Object> facts = convertGameStateToFacts(gameState);
-            program.addObjectInput(facts);
+            // Converti GameState in fatti ASP e aggiungili al programma
+            convertAndAddGameStateFacts(program, gameState);
 
-            // Configura DLV2 per trovare soluzioni ottimali
+            // Aggiungi opzioni per DLV2
             handler.addOption(new OptionDescriptor("--filter=move"));
             handler.addOption(new OptionDescriptor("--models=1"));
-            handler.addOption(new OptionDescriptor("--opt-mode=optN")); // Ottimizzazione
 
-            // Esegue il solver
-            AnswerSets answerSets = (AnswerSets) handler.startSync(program);
+            // Aggiungi il programma al handler
+            handler.addProgram(program);
+
+            // ✅ CORREZIONE: startSync() senza parametri
+            Output output = handler.startSync();
+
+            // Converte l'output in AnswerSets
+            AnswerSets answerSets = (AnswerSets) output;
 
             // Converte i risultati in mosse
             return extractMoves(answerSets);
@@ -84,13 +94,11 @@ public class EmbAspGameSolver {
     /**
      * Converte GameState in fatti ASP (riusa la logica del checker)
      */
-    private List<Object> convertGameStateToFacts(GameState gameState) {
-        List<Object> facts = new ArrayList<>();
-
+    private void convertAndAddGameStateFacts(InputProgram program, GameState gameState) throws Exception {
         // Parametri del gioco
-        facts.add(new EmbAspLevelChecker.GameParameterFact("num_tubes", gameState.getNumberOfTubes()));
-        facts.add(new EmbAspLevelChecker.GameParameterFact("tube_capacity", gameState.getTubeCapacity()));
-        facts.add(new EmbAspLevelChecker.GameParameterFact("num_colors", gameState.getNumberOfColors()));
+        program.addObjectInput(new EmbAspLevelChecker.NumTubesFact(gameState.getNumberOfTubes()));
+        program.addObjectInput(new EmbAspLevelChecker.TubeCapacityFact(gameState.getTubeCapacity()));
+        program.addObjectInput(new EmbAspLevelChecker.NumColorsFact(gameState.getNumberOfColors()));
 
         // Colori utilizzati
         Set<String> usedColors = new HashSet<>();
@@ -98,30 +106,28 @@ public class EmbAspGameSolver {
         // Stato dei tubi
         for (int tubeIndex = 0; tubeIndex < gameState.getNumberOfTubes(); tubeIndex++) {
             Tube tube = gameState.getTube(tubeIndex);
-            facts.add(new EmbAspLevelChecker.TubeFact(tubeIndex));
+            program.addObjectInput(new EmbAspLevelChecker.TubeFact(tubeIndex));
 
             List<Ball> balls = tube.getBalls();
             for (int pos = 0; pos < balls.size(); pos++) {
                 Ball ball = balls.get(pos);
                 String colorName = ball.getColor().name().toLowerCase();
 
-                facts.add(new EmbAspLevelChecker.BallFact(tubeIndex, pos, colorName));
+                program.addObjectInput(new EmbAspLevelChecker.BallFact(tubeIndex, pos, colorName));
                 usedColors.add(colorName);
             }
         }
 
         // Aggiungi i colori utilizzati
         for (String color : usedColors) {
-            facts.add(new EmbAspLevelChecker.ColorFact(color));
+            program.addObjectInput(new EmbAspLevelChecker.ColorFact(color));
         }
-
-        return facts;
     }
 
     /**
      * Estrae le mosse dagli AnswerSets
      */
-    private List<GameState.Move> extractMoves(AnswerSets answerSets) {
+    private List<GameState.Move> extractMoves(AnswerSets answerSets) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
         if (answerSets.getAnswersets().isEmpty()) {
             return new ArrayList<>();
         }
@@ -201,16 +207,21 @@ public class EmbAspGameSolver {
     }
 
     // ============================================================================
-    // CLASSI per il MAPPING AUTOMATICO embASP - SOLVER
+    // CLASSI per il MAPPING AUTOMATICO embASP - SOLVER - VERSIONE CORRETTA
     // ============================================================================
 
     /**
-     * Rappresenta una mossa in ASP
+     * ✅ MAPPING CORRETTO: Rappresenta una mossa in ASP
      */
-    @it.unical.mat.embasp.languages.asp.Term
+    @Id("move")
     public static class MoveFact {
+        @Param(0)
         private int fromTube;
+
+        @Param(1)
         private int toTube;
+
+        @Param(2)
         private int step;
 
         public MoveFact(int fromTube, int toTube, int step) {
@@ -222,30 +233,6 @@ public class EmbAspGameSolver {
         public int getFromTube() { return fromTube; }
         public int getToTube() { return toTube; }
         public int getStep() { return step; }
-
-        @Override
-        public String toString() {
-            return "move(" + fromTube + ", " + toTube + ", " + step + ")";
-        }
-    }
-
-    /**
-     * Rappresenta un passo della soluzione
-     */
-    @it.unical.mat.embasp.languages.asp.Term
-    public static class SolutionStepFact {
-        private int step;
-
-        public SolutionStepFact(int step) {
-            this.step = step;
-        }
-
-        public int getStep() { return step; }
-
-        @Override
-        public String toString() {
-            return "solution_step(" + step + ")";
-        }
     }
 
     /**

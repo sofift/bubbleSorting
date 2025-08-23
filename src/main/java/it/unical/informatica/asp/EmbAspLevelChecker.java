@@ -7,17 +7,24 @@ import it.unical.informatica.model.Ball;
 import it.unical.mat.embasp.base.Handler;
 import it.unical.mat.embasp.base.InputProgram;
 import it.unical.mat.embasp.base.OptionDescriptor;
+import it.unical.mat.embasp.base.Output;
+import it.unical.mat.embasp.languages.Id;
+import it.unical.mat.embasp.languages.IllegalAnnotationException;
+import it.unical.mat.embasp.languages.ObjectNotValidException;
+import it.unical.mat.embasp.languages.Param;
 import it.unical.mat.embasp.languages.asp.ASPInputProgram;
 import it.unical.mat.embasp.languages.asp.ASPMapper;
 import it.unical.mat.embasp.languages.asp.AnswerSet;
 import it.unical.mat.embasp.languages.asp.AnswerSets;
 import it.unical.mat.embasp.platforms.desktop.DesktopHandler;
 import it.unical.mat.embasp.specializations.dlv2.desktop.DLV2DesktopService;
+import jdk.jfr.Registered;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
 /**
- * Classe per verificare la risolubilità usando embASP con DLV2
+ * Classe per verificare la risolubilità usando embASP con DLV2 - VERSIONE CORRETTA
  */
 public class EmbAspLevelChecker {
 
@@ -31,8 +38,8 @@ public class EmbAspLevelChecker {
         // Inizializza handler per DLV2
         this.handler = new DesktopHandler(new DLV2DesktopService(DLV2_PATH));
 
-        // Inizializza mapper per la conversione automatica
-        this.mapper = new ASPMapper();
+        // Inizializza mapper usando getInstance()
+        this.mapper = ASPMapper.getInstance();
         setupMapper();
     }
 
@@ -40,12 +47,15 @@ public class EmbAspLevelChecker {
      * Configura il mapper per la conversione automatica Java ↔ ASP
      */
     private void setupMapper() {
-        // Registra le classi del dominio per il mapping automatico
-        mapper.registerClass(GameStateFact.class);
-        mapper.registerClass(TubeFact.class);
-        mapper.registerClass(BallFact.class);
-        mapper.registerClass(ColorFact.class);
-        mapper.registerClass(SolvableFact.class);
+        try {
+            // Registra le classi del dominio per il mapping automatico
+            mapper.registerClass(TubeFact.class);
+            mapper.registerClass(BallFact.class);
+            mapper.registerClass(ColorFact.class);
+            mapper.registerClass(SolvableFact.class);
+        } catch (ObjectNotValidException | IllegalAnnotationException e) {
+            System.err.println("Errore nel setup mapper: " + e.getMessage());
+        }
     }
 
     /**
@@ -57,22 +67,20 @@ public class EmbAspLevelChecker {
             InputProgram program = new ASPInputProgram();
             program.addFilesPath(LEVEL_CHECKER_PROGRAM);
 
-            // Converti GameState in fatti ASP
-            List<Object> facts = convertGameStateToFacts(gameState);
+            // Converti GameState in fatti ASP e aggiungili al programma
+            convertAndAddGameStateFacts(program, gameState);
 
-            // Aggiungi i fatti al programma
-            program.addObjectInput(facts);
+            // Aggiungi il programma al handler
+            handler.addProgram(program);
 
-            // Configura opzioni per DLV2
-            handler.addOption(new OptionDescriptor("--filter=solvable"));
-            handler.addOption(new OptionDescriptor("--models=1"));
+            // ✅ CORREZIONE: startSync() senza parametri
+            Output output = handler.startSync();
 
-            // Esegue il solver
-            AnswerSets answerSets = (AnswerSets) handler.startSync(program);
+            // Converte l'output in AnswerSets
+            AnswerSets answerSets = (AnswerSets) output;
 
             // Verifica se esiste una soluzione
-            return !answerSets.getAnswersets().isEmpty() &&
-                    containsSolvableFact(answerSets);
+            return containsSolvableFact(answerSets);
 
         } catch (Exception e) {
             System.err.println("Errore nella verifica con embASP: " + e.getMessage());
@@ -81,15 +89,13 @@ public class EmbAspLevelChecker {
     }
 
     /**
-     * Converte GameState in lista di fatti ASP
+     * Converte GameState in fatti ASP e li aggiunge al programma
      */
-    private List<Object> convertGameStateToFacts(GameState gameState) {
-        List<Object> facts = new ArrayList<>();
-
+    private void convertAndAddGameStateFacts(InputProgram program, GameState gameState) throws Exception {
         // Parametri del gioco
-        facts.add(new GameParameterFact("num_tubes", gameState.getNumberOfTubes()));
-        facts.add(new GameParameterFact("tube_capacity", gameState.getTubeCapacity()));
-        facts.add(new GameParameterFact("num_colors", gameState.getNumberOfColors()));
+        program.addObjectInput(new NumTubesFact(gameState.getNumberOfTubes()));
+        program.addObjectInput(new TubeCapacityFact(gameState.getTubeCapacity()));
+        program.addObjectInput(new NumColorsFact(gameState.getNumberOfColors()));
 
         // Colori utilizzati
         Set<String> usedColors = new HashSet<>();
@@ -97,30 +103,28 @@ public class EmbAspLevelChecker {
         // Stato dei tubi
         for (int tubeIndex = 0; tubeIndex < gameState.getNumberOfTubes(); tubeIndex++) {
             Tube tube = gameState.getTube(tubeIndex);
-            facts.add(new TubeFact(tubeIndex));
+            program.addObjectInput(new TubeFact(tubeIndex));
 
             List<Ball> balls = tube.getBalls();
             for (int pos = 0; pos < balls.size(); pos++) {
                 Ball ball = balls.get(pos);
                 String colorName = ball.getColor().name().toLowerCase();
 
-                facts.add(new BallFact(tubeIndex, pos, colorName));
+                program.addObjectInput(new BallFact(tubeIndex, pos, colorName));
                 usedColors.add(colorName);
             }
         }
 
         // Aggiungi i colori utilizzati
         for (String color : usedColors) {
-            facts.add(new ColorFact(color));
+            program.addObjectInput(new ColorFact(color));
         }
-
-        return facts;
     }
 
     /**
      * Verifica se gli AnswerSets contengono il fatto "solvable"
      */
-    private boolean containsSolvableFact(AnswerSets answerSets) {
+    private boolean containsSolvableFact(AnswerSets answerSets) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
         for (AnswerSet answerSet : answerSets.getAnswersets()) {
             for (Object atom : answerSet.getAtoms()) {
                 if (atom instanceof SolvableFact) {
@@ -155,7 +159,6 @@ public class EmbAspLevelChecker {
      */
     public boolean isSolverAvailable() {
         try {
-            // Test semplice per verificare che DLV2 sia accessibile
             ProcessBuilder pb = new ProcessBuilder(DLV2_PATH, "--help");
             Process process = pb.start();
             process.waitFor();
@@ -178,37 +181,54 @@ public class EmbAspLevelChecker {
     }
 
     // ============================================================================
-    // CLASSI per il MAPPING AUTOMATICO embASP
+    // CLASSI per il MAPPING AUTOMATICO embASP - VERSIONE CORRETTA
     // ============================================================================
 
     /**
-     * Rappresenta parametri del gioco in ASP
+     * ✅ MAPPING CORRETTO: Id + Param
      */
-    @it.unical.mat.embasp.languages.asp.Term
-    public static class GameParameterFact {
-        private String parameter;
+    @Id("num_tubes")
+    public static class NumTubesFact {
+        @Param(0)
         private int value;
 
-        public GameParameterFact(String parameter, int value) {
-            this.parameter = parameter;
+        public NumTubesFact(int value) {
             this.value = value;
         }
 
-        // Getters necessari per embASP
-        public String getParameter() { return parameter; }
         public int getValue() { return value; }
+    }
 
-        @Override
-        public String toString() {
-            return parameter + "(" + value + ")";
+    @Id("tube_capacity")
+    public static class TubeCapacityFact {
+        @Param(0)
+        private int value;
+
+        public TubeCapacityFact(int value) {
+            this.value = value;
         }
+        public int getValue() { return value; }
+    }
+
+    @Id("num_colors")
+    public static class NumColorsFact {
+       @Param(0)
+        private int value;
+
+        public NumColorsFact(int value) {
+            this.value = value;
+        }
+
+        public int getValue() { return value; }
     }
 
     /**
      * Rappresenta un tubo in ASP
      */
-    @it.unical.mat.embasp.languages.asp.Term
+    @Id("tube")
     public static class TubeFact {
+
+        @Param(0)
         private int tubeId;
 
         public TubeFact(int tubeId) {
@@ -216,20 +236,20 @@ public class EmbAspLevelChecker {
         }
 
         public int getTubeId() { return tubeId; }
-
-        @Override
-        public String toString() {
-            return "tube(" + tubeId + ")";
-        }
     }
 
     /**
      * Rappresenta una pallina in ASP
      */
-    @it.unical.mat.embasp.languages.asp.Term
+    @Id("initial_ball")
     public static class BallFact {
+        @Param(0)
         private int tubeId;
+
+        @Param(1)
         private int position;
+
+        @Param(2)
         private String color;
 
         public BallFact(int tubeId, int position, String color) {
@@ -241,18 +261,16 @@ public class EmbAspLevelChecker {
         public int getTubeId() { return tubeId; }
         public int getPosition() { return position; }
         public String getColor() { return color; }
-
-        @Override
-        public String toString() {
-            return "initial_ball(" + tubeId + ", " + position + ", " + color + ")";
-        }
     }
 
     /**
      * Rappresenta un colore disponibile in ASP
      */
-    @it.unical.mat.embasp.languages.asp.Term
+    @Id("color")
     public static class ColorFact {
+
+
+        @it.unical.mat.embasp.languages.Param(0)
         private String color;
 
         public ColorFact(String color) {
@@ -260,24 +278,16 @@ public class EmbAspLevelChecker {
         }
 
         public String getColor() { return color; }
-
-        @Override
-        public String toString() {
-            return "color(" + color + ")";
-        }
     }
 
     /**
      * Rappresenta il risultato "solvable" da ASP
      */
-    @it.unical.mat.embasp.languages.asp.Term
+    @Id("solvable")
     public static class SolvableFact {
+
         public SolvableFact() {}
 
-        @Override
-        public String toString() {
-            return "solvable";
-        }
     }
 
     /**

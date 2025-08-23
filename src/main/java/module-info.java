@@ -10,6 +10,7 @@ module bubbleSorting {
     requires org.slf4j;
     requires java.net.http;
     requires java.prefs;
+    requires jdk.jfr;
 
     // Esportazioni “normali”
     exports it.unical.informatica;
