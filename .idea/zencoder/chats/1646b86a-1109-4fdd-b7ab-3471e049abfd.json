@@ -1,0 +1,389 @@
+{
+    "checksum": "1ace00445eb2fe2e7b8c2142bfca8d34923359094466fbde857fc37e71f55560",
+    "data": {
+    "id": "1646b86a-1109-4fdd-b7ab-3471e049abfd",
+    "createdAt": 1755967061481,
+    "updatedAt": 1755967071111,
+    "title": "ASPMapper Instantiation Issue",
+    "messages": [
+        {
+            "id": "4cca09ce-eaf1-48af-8614-688293afad32",
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Fix this:"
+                },
+                {
+                    "type": "codeSnippet",
+                    "text": "new ASPMapper()",
+                    "language": "java"
+                },
+                {
+                    "type": "text",
+                    "text": "'ASPMapper()' has private access in 'it.unical.mat.embasp.languages.asp.ASPMapper'"
+                }
+            ],
+            "context": {
+                "currentFile": {
+                    "path": "C:\\Users\\Sofia\\Desktop\\bubbleSorting\\src\\main\\java\\it\\unical\\informatica\\asp\\EmbAspGameSolver.java",
+                    "fsPath": "C:/Users/Sofia/Desktop/bubbleSorting/src/main/java/it/unical/informatica/asp/EmbAspGameSolver.java",
+                    "content": "package it.unical.informatica.asp;\n\nimport it.unical.informatica.model.GameState;\nimport it.unical.informatica.model.Tube;\nimport it.unical.informatica.model.Ball;\n\nimport it.unical.mat.embasp.base.Handler;\nimport it.unical.mat.embasp.base.InputProgram;\nimport it.unical.mat.embasp.base.OptionDescriptor;\nimport it.unical.mat.embasp.languages.IllegalAnnotationException;\nimport it.unical.mat.embasp.languages.ObjectNotValidException;\nimport it.unical.mat.embasp.languages.asp.ASPInputProgram;\nimport it.unical.mat.embasp.languages.asp.ASPMapper;\nimport it.unical.mat.embasp.languages.asp.AnswerSet;\nimport it.unical.mat.embasp.languages.asp.AnswerSets;\nimport it.unical.mat.embasp.platforms.desktop.DesktopHandler;\nimport it.unical.mat.embasp.specializations.dlv2.desktop.DLV2DesktopService;\n\nimport java.util.*;\n\n/**\n * Classe per risolvere automaticamente il gioco usando embASP con DLV2\n */\npublic class EmbAspGameSolver {\n\n    private static final String DLV2_PATH = \"libs/dlv-2.1.2-win64.exe\";\n    private static final String GAME_SOLVER_PROGRAM = \"src/main/resources/asp/game_solver.lp\";\n\n    private final Handler handler;\n    private final ASPMapper mapper;\n\n    public EmbAspGameSolver() throws ObjectNotValidException, IllegalAnnotationException {\n        // Inizializza handler per DLV2\n        this.handler = new DesktopHandler(new DLV2DesktopService(DLV2_PATH));\n\n        // Inizializza mapper\n        this.mapper = new ASPMapper();\n        setupMapper();\n    }\n\n    /**\n     * Configura il mapper per il mapping automatico\n     */\n    private void setupMapper() throws ObjectNotValidException, IllegalAnnotationException {\n        // Registra le classi per il mapping\n        mapper.registerClass(EmbAspLevelChecker.GameParameterFact.class);\n        mapper.registerClass(EmbAspLevelChecker.TubeFact.class);\n        mapper.registerClass(EmbAspLevelChecker.BallFact.class);\n        mapper.registerClass(EmbAspLevelChecker.ColorFact.class);\n        mapper.registerClass(MoveFact.class);\n        mapper.registerClass(SolutionStepFact.class);\n    }\n\n    /**\n     * Risolve il gioco e restituisce la sequenza di mosse ottimali\n     */\n    public List<GameState.Move> solve(GameState gameState) {\n        try {\n            // Crea il programma ASP\n            InputProgram program = new ASPInputProgram();\n            program.addFilesPath(GAME_SOLVER_PROGRAM);\n\n            // Converti GameState in fatti ASP\n            List<Object> facts = convertGameStateToFacts(gameState);\n            program.addObjectInput(facts);\n\n            // Configura DLV2 per trovare soluzioni ottimali\n            handler.addOption(new OptionDescriptor(\"--filter=move\"));\n            handler.addOption(new OptionDescriptor(\"--models=1\"));\n            handler.addOption(new OptionDescriptor(\"--opt-mode=optN\")); // Ottimizzazione\n\n            // Esegue il solver\n            AnswerSets answerSets = (AnswerSets) handler.startSync(program);\n\n            // Converte i risultati in mosse\n            return extractMoves(answerSets);\n\n        } catch (Exception e) {\n            System.err.println(\"Errore nella risoluzione con embASP: \" + e.getMessage());\n            return new ArrayList<>();\n        }\n    }\n\n    /**\n     * Converte GameState in fatti ASP (riusa la logica del checker)\n     */\n    private List<Object> convertGameStateToFacts(GameState gameState) {\n        List<Object> facts = new ArrayList<>();\n\n        // Parametri del gioco\n        facts.add(new EmbAspLevelChecker.GameParameterFact(\"num_tubes\", gameState.getNumberOfTubes()));\n        facts.add(new EmbAspLevelChecker.GameParameterFact(\"tube_capacity\", gameState.getTubeCapacity()));\n        facts.add(new EmbAspLevelChecker.GameParameterFact(\"num_colors\", gameState.getNumberOfColors()));\n\n        // Colori utilizzati\n        Set<String> usedColors = new HashSet<>();\n\n        // Stato dei tubi\n        for (int tubeIndex = 0; tubeIndex < gameState.getNumberOfTubes(); tubeIndex++) {\n            Tube tube = gameState.getTube(tubeIndex);\n            facts.add(new EmbAspLevelChecker.TubeFact(tubeIndex));\n\n            List<Ball> balls = tube.getBalls();\n            for (int pos = 0; pos < balls.size(); pos++) {\n                Ball ball = balls.get(pos);\n                String colorName = ball.getColor().name().toLowerCase();\n\n                facts.add(new EmbAspLevelChecker.BallFact(tubeIndex, pos, colorName));\n                usedColors.add(colorName);\n            }\n        }\n\n        // Aggiungi i colori utilizzati\n        for (String color : usedColors) {\n            facts.add(new EmbAspLevelChecker.ColorFact(color));\n        }\n\n        return facts;\n    }\n\n    /**\n     * Estrae le mosse dagli AnswerSets\n     */\n    private List<GameState.Move> extractMoves(AnswerSets answerSets) {\n        if (answerSets.getAnswersets().isEmpty()) {\n            return new ArrayList<>();\n        }\n\n        // Prendi il primo (e migliore) answer set\n        AnswerSet bestAnswer = answerSets.getAnswersets().get(0);\n\n        // Raccogli tutti i fatti di tipo \"move\"\n        Map<Integer, GameState.Move> movesByStep = new TreeMap<>();\n\n        for (Object atom : bestAnswer.getAtoms()) {\n            if (atom instanceof MoveFact) {\n                MoveFact moveFact = (MoveFact) atom;\n                GameState.Move move = new GameState.Move(\n                        moveFact.getFromTube(),\n                        moveFact.getToTube()\n                );\n                movesByStep.put(moveFact.getStep(), move);\n            }\n        }\n\n        // Restituisce le mosse ordinate per step\n        return new ArrayList<>(movesByStep.values());\n    }\n\n    /**\n     * Trova solo la prossima mossa migliore\n     */\n    public GameState.Move findNextMove(GameState gameState) {\n        List<GameState.Move> solution = solve(gameState);\n        return solution.isEmpty() ? null : solution.get(0);\n    }\n\n    /**\n     * Stima la difficoltà del livello (numero di mosse necessarie)\n     */\n    public int estimateDifficulty(GameState gameState) {\n        return solve(gameState).size();\n    }\n\n    /**\n     * Verifica se una mossa è ottimale\n     */\n    public boolean isMoveOptimal(GameState gameState, GameState.Move candidateMove) {\n        GameState.Move bestMove = findNextMove(gameState);\n        return bestMove != null && bestMove.equals(candidateMove);\n    }\n\n    /**\n     * Risoluzione con statistiche dettagliate\n     */\n    public SolveResult solveWithStats(GameState gameState) {\n        long startTime = System.currentTimeMillis();\n\n        try {\n            List<GameState.Move> moves = solve(gameState);\n            long duration = System.currentTimeMillis() - startTime;\n\n            return new SolveResult(\n                    !moves.isEmpty(),\n                    moves,\n                    duration,\n                    \"SUCCESS\",\n                    \"embASP with DLV2\"\n            );\n\n        } catch (Exception e) {\n            long duration = System.currentTimeMillis() - startTime;\n            return new SolveResult(\n                    false,\n                    new ArrayList<>(),\n                    duration,\n                    \"ERROR\",\n                    e.getMessage()\n            );\n        }\n    }\n\n    // ============================================================================\n    // CLASSI per il MAPPING AUTOMATICO embASP - SOLVER\n    // ============================================================================\n\n    /**\n     * Rappresenta una mossa in ASP\n     */\n    @it.unical.mat.embasp.languages.asp.Term\n    public static class MoveFact {\n        private int fromTube;\n        private int toTube;\n        private int step;\n\n        public MoveFact(int fromTube, int toTube, int step) {\n            this.fromTube = fromTube;\n            this.toTube = toTube;\n            this.step = step;\n        }\n\n        public int getFromTube() { return fromTube; }\n        public int getToTube() { return toTube; }\n        public int getStep() { return step; }\n\n        @Override\n        public String toString() {\n            return \"move(\" + fromTube + \", \" + toTube + \", \" + step + \")\";\n        }\n    }\n\n    /**\n     * Rappresenta un passo della soluzione\n     */\n    @it.unical.mat.embasp.languages.asp.Term\n    public static class SolutionStepFact {\n        private int step;\n\n        public SolutionStepFact(int step) {\n            this.step = step;\n        }\n\n        public int getStep() { return step; }\n\n        @Override\n        public String toString() {\n            return \"solution_step(\" + step + \")\";\n        }\n    }\n\n    /**\n     * Risultato della risoluzione con statistiche\n     */\n    public static class SolveResult {\n        private final boolean solved;\n        private final List<GameState.Move> moves;\n        private final long duration;\n        private final String status;\n        private final String details;\n\n        public SolveResult(boolean solved, List<GameState.Move> moves, long duration,\n                           String status, String details) {\n            this.solved = solved;\n            this.moves = moves;\n            this.duration = duration;\n            this.status = status;\n            this.details = details;\n        }\n\n        // Getters\n        public boolean isSolved() { return solved; }\n        public List<GameState.Move> getMoves() { return moves; }\n        public long getDuration() { return duration; }\n        public String getStatus() { return status; }\n        public String getDetails() { return details; }\n        public int getMoveCount() { return moves.size(); }\n\n        @Override\n        public String toString() {\n            return String.format(\"SolveResult[solved=%s, moves=%d, duration=%dms, status=%s, details=%s]\",\n                    solved, moves.size(), duration, status, details);\n        }\n    }\n}",
+                    "language": "java"
+                },
+                "codebaseEnabled": true
+            },
+            "createdAt": 1755967061511,
+            "isInternal": false,
+            "rawContent": {
+                "type": "doc",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Fix this:"
+                            },
+                            {
+                                "type": "codeBlock",
+                                "attrs": {
+                                    "language": "java"
+                                },
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": "new ASPMapper()"
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "text",
+                                "text": "'ASPMapper()' has private access in 'it.unical.mat.embasp.languages.asp.ASPMapper'"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "autoAppliedRules": []
+        },
+        {
+            "id": "2ca22f47-51ef-47b8-9059-ff69141dc963",
+            "role": "assistant",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "I can see the issue. The `ASPMapper` constructor has private access, which means it cannot be instantiated directly using `new ASPMapper()`. Let me search for how to properly create an ASPMapper instance in this codebase."
+                },
+                {
+                    "type": "toolCall",
+                    "toolCallId": "toolu_0191R7h6YumCHDvAhkgnZdzU",
+                    "title": "Fulltext search",
+                    "statusText": "Done",
+                    "status": "SUCCESS",
+                    "isHidden": false
+                },
+                {
+                    "type": "text",
+                    "text": "I can see that both `EmbAspLevelChecker.java` and `EmbAspGameSolver.java` have the same issue. Let me check the `EmbAspLevelChecker.java` file to see if there's a different pattern being used there or if it has the same problem:"
+                },
+                {
+                    "type": "toolCall",
+                    "toolCallId": "toolu_01QZUjPKcK4WaqwrBFdaGti4",
+                    "statusText": "Viewed file (lines 1:310)",
+                    "status": "SUCCESS",
+                    "context": {
+                        "files": [
+                            {
+                                "path": "src/main/java/it/unical/informatica/asp/EmbAspLevelChecker.java",
+                                "fsPath": "C:/Users/Sofia/Desktop/bubbleSorting/src/main/java/it/unical/informatica/asp/EmbAspLevelChecker.java"
+                            }
+                        ]
+                    },
+                    "isHidden": false
+                },
+                {
+                    "type": "text",
+                    "text": "I can see that both files have the same issue with `new ASPMapper()`. Let me search for documentation or examples of how to properly create an ASPMapper instance. Let me also check if there are any static factory methods or alternative ways to create it:"
+                },
+                {
+                    "type": "toolCall",
+                    "toolCallId": "toolu_017eQQdxKtFnzZfBrrq6FsMU",
+                    "title": "Web search",
+                    "statusText": "Done",
+                    "status": "SUCCESS",
+                    "isHidden": false
+                },
+                {
+                    "type": "text",
+                    "text": "Let me search more specifically for embASP documentation or examples:"
+                },
+                {
+                    "type": "toolCall",
+                    "toolCallId": "toolu_01K5avDQyZKYRHbNvNCYZq2Q",
+                    "title": "Web search",
+                    "statusText": "Done",
+                    "status": "SUCCESS",
+                    "isHidden": false
+                },
+                {
+                    "type": "text",
+                    "text": "Let me check the embASP documentation more specifically:"
+                },
+                {
+                    "type": "toolCall",
+                    "toolCallId": "toolu_015YKditZZjWLk1jiH6FgBgW",
+                    "title": "Fetch webpage",
+                    "statusText": "Done",
+                    "status": "SUCCESS",
+                    "isHidden": false
+                },
+                {
+                    "type": "text",
+                    "text": "Let me search for ASPMapper factory methods or static methods in the codebase:"
+                },
+                {
+                    "type": "toolCall",
+                    "toolCallId": "toolu_01TDzaqD26Y91DLJirhdAedy",
+                    "title": "Fulltext search",
+                    "statusText": "Failed",
+                    "status": "ERROR",
+                    "isHidden": false
+                },
+                {
+                    "type": "toolCall",
+                    "toolCallId": "toolu_01QcnRGhqZPTw1Rn6nPe7319",
+                    "title": "Fulltext search",
+                    "statusText": "Done",
+                    "status": "SUCCESS",
+                    "isHidden": false
+                },
+                {
+                    "type": "text",
+                    "text": "Let me search for any static methods in ASPMapper:"
+                },
+                {
+                    "type": "toolCall",
+                    "toolCallId": "toolu_01QLqDR9Ti6A1S2Ynd5xVE5o",
+                    "title": "Fulltext search",
+                    "statusText": "Done",
+                    "status": "SUCCESS",
+                    "isHidden": false
+                },
+                {
+                    "type": "text",
+                    "text": "Let me check if there are any examples or documentation files in the project that might show the correct way to use ASPMapper:"
+                },
+                {
+                    "type": "toolCall",
+                    "toolCallId": "toolu_01Tap8YgEVbrsQb9gertjEBi",
+                    "title": "File search",
+                    "statusText": "Done",
+                    "status": "SUCCESS",
+                    "isHidden": false
+                },
+                {
+                    "type": "toolCall",
+                    "toolCallId": "toolu_01VGLKuRbvWjQYBM98sfkpcq",
+                    "title": "File search",
+                    "statusText": "Done",
+                    "status": "SUCCESS",
+                    "isHidden": false
+                },
+                {
+                    "type": "text",
+                    "text": "Let me check if there are any JAR files or dependencies that might give us a clue:"
+                },
+                {
+                    "type": "toolCall",
+                    "toolCallId": "toolu_01BPVkUBmntR85MTNTZK9yRz",
+                    "title": "File search",
+                    "statusText": "Done",
+                    "status": "SUCCESS",
+                    "isHidden": false
+                },
+                {
+                    "type": "toolCall",
+                    "toolCallId": "toolu_01GRsoNiHoN1AUHVNjAgAc6T",
+                    "statusText": "Viewed file (lines 1:161)",
+                    "status": "SUCCESS",
+                    "context": {
+                        "files": [
+                            {
+                                "path": "pom.xml",
+                                "fsPath": "C:/Users/Sofia/Desktop/bubbleSorting/pom.xml"
+                            }
+                        ]
+                    },
+                    "isHidden": false
+                },
+                {
+                    "type": "text",
+                    "text": "Great! I can see that the project is using embASP version 7.2.0. Let me search for more information about this specific version and how to properly instantiate ASPMapper:"
+                },
+                {
+                    "type": "toolCall",
+                    "toolCallId": "toolu_01ToN8vQAZ8xeBu5tQy4hPUL",
+                    "title": "Web search",
+                    "statusText": "Done",
+                    "status": "SUCCESS",
+                    "isHidden": false
+                },
+                {
+                    "type": "text",
+                    "text": "Let me try a different approach. Let me check if there are any other files in the project that might show the correct usage pattern, or if there are any test files:"
+                },
+                {
+                    "type": "toolCall",
+                    "toolCallId": "toolu_01ToQxggjzGvkNKRGevbaf8F",
+                    "title": "File search",
+                    "statusText": "Done",
+                    "status": "SUCCESS",
+                    "isHidden": false
+                },
+                {
+                    "type": "text",
+                    "text": "Let me check the ASP integration test to see if it shows the correct usage:"
+                },
+                {
+                    "type": "toolCall",
+                    "toolCallId": "toolu_01GmHrWc52dX33wq2dQec64m",
+                    "statusText": "Viewed file (lines 1:41)",
+                    "status": "SUCCESS",
+                    "context": {
+                        "files": [
+                            {
+                                "path": "src/test/java/it/unical/informatica/test/AspIntegrationTest.java",
+                                "fsPath": "C:/Users/Sofia/Desktop/bubbleSorting/src/test/java/it/unical/informatica/test/AspIntegrationTest.java"
+                            }
+                        ]
+                    },
+                    "isHidden": false
+                },
+                {
+                    "type": "text",
+                    "text": "This test doesn't use ASPMapper directly. Let me try to understand the embASP API better by looking at the current error and trying a different approach. Based on the error message and common patterns in Java libraries, it's likely that ASPMapper uses a singleton pattern or factory method. Let me try some common patterns:"
+                },
+                {
+                    "type": "toolCall",
+                    "toolCallId": "toolu_01PBUdT3N36bPM58txp57VKA",
+                    "title": "Web search",
+                    "statusText": "Done",
+                    "status": "SUCCESS",
+                    "isHidden": false
+                },
+                {
+                    "type": "text",
+                    "text": "Based on the search results, it seems like ASPMapper likely uses a singleton pattern. Let me try the most common singleton pattern method:"
+                },
+                {
+                    "type": "toolCall",
+                    "toolCallId": "toolu_018J4p83VXQwu8tJkCgLgnH7",
+                    "statusText": "Change generated",
+                    "status": "SUCCESS",
+                    "context": {
+                        "files": [
+                            {
+                                "path": "src/main/java/it/unical/informatica/asp/EmbAspGameSolver.java",
+                                "fsPath": "C:/Users/Sofia/Desktop/bubbleSorting/src/main/java/it/unical/informatica/asp/EmbAspGameSolver.java"
+                            }
+                        ]
+                    },
+                    "isHidden": false
+                },
+                {
+                    "type": "codeHunk",
+                    "lineBasedDiff": "--- C:/Users/Sofia/Desktop/bubbleSorting/src/main/java/it/unical/informatica/asp/EmbAspGameSolver.java\n+++ C:/Users/Sofia/Desktop/bubbleSorting/src/main/java/it/unical/informatica/asp/EmbAspGameSolver.java\n@@ -34,7 +34,7 @@\n         this.handler = new DesktopHandler(new DLV2DesktopService(DLV2_PATH));\n \n         // Inizializza mapper\n-        this.mapper = new ASPMapper();\n+        this.mapper = ASPMapper.getInstance();\n         setupMapper();\n     }\n ",
+                    "refToolCallId": "toolu_018J4p83VXQwu8tJkCgLgnH7"
+                },
+                {
+                    "type": "text",
+                    "text": "Now let me also fix the same issue in the EmbAspLevelChecker.java file:"
+                },
+                {
+                    "type": "toolCall",
+                    "toolCallId": "toolu_01V1ATfFFJYEvKM7B19Amqbp",
+                    "statusText": "Change generated",
+                    "status": "SUCCESS",
+                    "context": {
+                        "files": [
+                            {
+                                "path": "src/main/java/it/unical/informatica/asp/EmbAspLevelChecker.java",
+                                "fsPath": "C:/Users/Sofia/Desktop/bubbleSorting/src/main/java/it/unical/informatica/asp/EmbAspLevelChecker.java"
+                            }
+                        ]
+                    },
+                    "isHidden": false
+                },
+                {
+                    "type": "codeHunk",
+                    "lineBasedDiff": "--- C:/Users/Sofia/Desktop/bubbleSorting/src/main/java/it/unical/informatica/asp/EmbAspLevelChecker.java\n+++ C:/Users/Sofia/Desktop/bubbleSorting/src/main/java/it/unical/informatica/asp/EmbAspLevelChecker.java\n@@ -32,7 +32,7 @@\n         this.handler = new DesktopHandler(new DLV2DesktopService(DLV2_PATH));\n \n         // Inizializza mapper per la conversione automatica\n-        this.mapper = new ASPMapper();\n+        this.mapper = ASPMapper.getInstance();\n         setupMapper();\n     }\n ",
+                    "refToolCallId": "toolu_01V1ATfFFJYEvKM7B19Amqbp"
+                },
+                {
+                    "type": "text",
+                    "text": "Now let's test if this fixes the compilation issue by trying to compile the project:"
+                },
+                {
+                    "type": "toolCall",
+                    "toolCallId": "toolu_01BM7f29KXPc2yYmTythq7sc",
+                    "status": "IN_PROGRESS",
+                    "isHidden": true
+                },
+                {
+                    "type": "codePatch",
+                    "diffs": [
+                        {
+                            "path": "src/main/java/it/unical/informatica/asp/EmbAspGameSolver.java",
+                            "fsPath": "C:/Users/Sofia/Desktop/bubbleSorting/src/main/java/it/unical/informatica/asp/EmbAspGameSolver.java",
+                            "patch": "@@ -1457,20 +1457,16 @@\n mapper =\n- new\n  ASPMapp\n@@ -1463,24 +1463,36 @@\n  = ASPMapper\n+.getInstance\n ();%0D%0A       \n",
+                            "isNew": false,
+                            "isApplied": false,
+                            "isUnread": true
+                        },
+                        {
+                            "path": "src/main/java/it/unical/informatica/asp/EmbAspLevelChecker.java",
+                            "fsPath": "C:/Users/Sofia/Desktop/bubbleSorting/src/main/java/it/unical/informatica/asp/EmbAspLevelChecker.java",
+                            "patch": "@@ -1297,20 +1297,16 @@\n mapper =\n- new\n  ASPMapp\n@@ -1303,24 +1303,36 @@\n  = ASPMapper\n+.getInstance\n ();%0D%0A       \n",
+                            "isNew": false,
+                            "isApplied": false,
+                            "isUnread": true
+                        }
+                    ]
+                },
+                {
+                    "type": "shellCommand",
+                    "command": "mvn compile",
+                    "id": "e038aa35-5bce-488c-a7ab-99a2f757c6f4",
+                    "status": "CONFIRMATION",
+                    "toolCallId": "toolu_01BM7f29KXPc2yYmTythq7sc",
+                    "commandsRequiringConfirmation": [
+                        {
+                            "name": "mvn",
+                            "arguments": [
+                                "compile"
+                            ]
+                        }
+                    ],
+                    "isBackground": false,
+                    "maxWaitTimeInSeconds": 240
+                }
+            ],
+            "context": {
+                "author": "Code agent",
+                "operationId": "1c87ad51-2cbd-4386-b670-bd84c97b0824"
+            },
+            "createdAt": 1755967071111,
+            "isInternal": false
+        }
+    ],
+    "isAgent": true,
+    "isNameGenerated": true,
+    "isCustomAgent": false,
+    "isUnitTestsAgent": false,
+    "isE2EAgent": false,
+    "isWebDevAgent": false,
+    "isQnaAgent": false,
+    "isRepoInfoAgent": false
+}
+}

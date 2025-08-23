@@ -1,0 +1,98 @@
+{
+    "checksum": "6a2da471f1ac4de7588ba495c4ce8510c5863bf80ed7df46d0e7b55b3fda1cbf",
+    "data": {
+    "id": "e05c6905-b62c-4519-8d75-a47af52402ce",
+    "createdAt": 1755965982515,
+    "updatedAt": 1755966008077,
+    "title": "Fix this: /**      * Costruttore principale - u...",
+    "messages": [
+        {
+            "id": "d1b35dc9-ed40-451a-8b50-1cf1671c91b7",
+            "role": "user",
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Fix this:"
+                },
+                {
+                    "type": "codeSnippet",
+                    "text": "/**\n     * Costruttore principale - utilizza il LevelGenerator\n     */\n    public GameState(GameLevel level, int currentLevelNumber) {\n        this.level = level;\n        this.currentLevelNumber = currentLevelNumber;\n        this.moves = 0;",
+                    "language": "java"
+                },
+                {
+                    "type": "text",
+                    "text": "'GameState(GameLevel, int)' is already defined in 'it.unical.informatica.model.GameState'"
+                }
+            ],
+            "context": {
+                "currentFile": {
+                    "path": "C:\\Users\\Sofia\\Desktop\\bubbleSorting\\src\\main\\java\\it\\unical\\informatica\\model\\GameState.java",
+                    "fsPath": "C:/Users/Sofia/Desktop/bubbleSorting/src/main/java/it/unical/informatica/model/GameState.java",
+                    "content": "package it.unical.informatica.model;\n\n\nimport java.util.*;\n\n/**\n * Rappresenta lo stato corrente del gioco - VERSIONE SEMPLIFICATA\n */\npublic class GameState {\n\n    private GameLevel level;           // ✅ Rimosso final per createTestLevel\n    private final List<Tube> tubes;\n    private int currentLevelNumber;    // ✅ Rimosso final per createTestLevel\n    private int moves;\n    private boolean gameWon;\n    private static LevelGenerator levelGenerator;\n\n    // ✅ COSTRUTTORE PRIVATO VUOTO per createTestLevel\n    // Aggiungi questo al file GameState.java - sostituzione del costruttore principale\n\n    /**\n     * Costruttore principale - utilizza il LevelGenerator\n     */\n    public GameState(GameLevel level, int currentLevelNumber) {\n        this.level = level;\n        this.currentLevelNumber = currentLevelNumber;\n        this.moves = 0;\n        this.gameWon = false;\n        this.tubes = new ArrayList<>();\n\n        try {\n            // ✅ USA IL NUOVO LEVEL GENERATOR\n            LevelGenerator generator = new LevelGenerator();\n            List<Tube> generatedTubes = generator.generateLevel(level, currentLevelNumber);\n\n            // Copia i tubi generati\n            for (Tube tube : generatedTubes) {\n                this.tubes.add(tube.copy());\n            }\n\n            System.out.println(\"✅ Livello generato con successo: \" + level.getDisplayName() +\n                    \" Livello \" + currentLevelNumber);\n\n        } catch (Exception e) {\n            System.err.println(\"⚠️ Errore nella generazione del livello, uso fallback: \" + e.getMessage());\n            // ✅ FALLBACK: Inizializzazione manuale semplice\n            initializeFallback();\n        }\n\n        checkWinCondition();\n    }\n\n    /**\n     * ✅ FALLBACK: Inizializzazione manuale semplice\n     */\n    private void initializeFallback() {\n        System.out.println(\"🔄 Inizializzando livello con metodo fallback...\");\n\n        // Crea tutti i tubi\n        for (int i = 0; i < level.getNumberOfTubes(); i++) {\n            tubes.add(new Tube(i, level.getTubeCapacity()));\n        }\n\n        // Crea e distribuisce le palline in modo semplice\n        List<Ball> allBalls = createAllBalls();\n        Collections.shuffle(allBalls);\n        distributeBallsSimple(allBalls);\n    }\n\n    // ✅ INIZIALIZZAZIONE LAZY per evitare problemi di costruttore\n    private static LevelGenerator getLevelGenerator() {\n        if (levelGenerator == null) {\n            levelGenerator = new LevelGenerator(); // ✅ NESSUNA ECCEZIONE\n        }\n        return levelGenerator;\n    }\n\n    /**\n     * Costruttore principale - utilizza il LevelGenerator\n     */\n    public GameState(GameLevel level, int currentLevelNumber) {\n        this.level = level;\n        this.currentLevelNumber = currentLevelNumber;\n        this.moves = 0;\n        this.gameWon = false;\n        this.tubes = new ArrayList<>();\n\n        try {\n            // ✅ UTILIZZA IL GENERATORE per creare configurazioni valide\n            GameState generatedLevel = (GameState) getLevelGenerator().generaLivello();\n\n            // Copia i tubi dalla configurazione generata\n            for (Tube tube : generatedLevel.tubes) {\n                this.tubes.add(tube.copy());\n            }\n        } catch (Exception e) {\n            System.err.println(\"⚠️ Errore nella generazione del livello, uso fallback: \" + e.getMessage());\n            // ✅ FALLBACK: Inizializzazione manuale semplice\n            initializeFallback();\n        }\n\n        checkWinCondition();\n    }\n\n    /**\n     * Copy constructor per creare una copia di un GameState\n     */\n    public GameState(GameState other) {\n        this.level = other.level;\n        this.currentLevelNumber = other.currentLevelNumber;\n        this.moves = other.moves;\n        this.gameWon = other.gameWon;\n        this.tubes = new ArrayList<>();\n\n        for (Tube tube : other.tubes) {\n            this.tubes.add(tube.copy());\n        }\n    }\n\n    /**\n     * Costruttore privato per creare GameState da tubi personalizzati\n     */\n    private GameState(GameLevel level, int currentLevelNumber, List<Tube> tubes) {\n        this.level = level;\n        this.currentLevelNumber = currentLevelNumber;\n        this.moves = 0;\n        this.gameWon = false;\n        this.tubes = new ArrayList<>();\n\n        for (Tube tube : tubes) {\n            this.tubes.add(tube.copy());\n        }\n\n        checkWinCondition();\n    }\n\n    /**\n     * Crea un GameState con tubi personalizzati (per testing)\n     */\n    public static GameState createFromTubes(GameLevel level, int levelNumber, List<Tube> customTubes) {\n        return new GameState(level, levelNumber, customTubes);\n    }\n\n\n    /**\n     * ✅ Crea un GameState deterministico per testing (bypassa il generatore casuale)\n     */\n    public static GameState createTestLevel(GameLevel level, int levelNumber) {\n        System.out.println(\"🧪 Creando livello di test per \" + level.getDisplayName() + \" \" + levelNumber);\n\n        // Crea GameState con costruttore privato vuoto\n        GameState testGameState = new GameState();\n        testGameState.level = level;\n        testGameState.currentLevelNumber = levelNumber;\n        testGameState.moves = 0;\n        testGameState.gameWon = false;\n        testGameState.tubes.clear();\n\n        // Crea configurazione di test semplice e deterministica\n        for (int i = 0; i < level.getNumberOfTubes(); i++) {\n            testGameState.tubes.add(new Tube(i, level.getTubeCapacity()));\n        }\n\n        // Configurazione di test: ogni colore nel proprio tubo, poi mescola leggermente\n        Ball.Color[] colors = level.getAvailableColors();\n        int ballId = 0;\n\n        for (int colorIndex = 0; colorIndex < colors.length; colorIndex++) {\n            Tube tube = testGameState.tubes.get(colorIndex);\n            Ball.Color color = colors[colorIndex];\n\n            for (int i = 0; i < level.getBallsPerColor(); i++) {\n                tube.addBall(new Ball(color, ballId++));\n            }\n        }\n\n        // Mescola solo una pallina per rendere il test interessante\n        if (testGameState.tubes.size() > 1 &&\n                !testGameState.tubes.get(0).isEmpty() &&\n                !testGameState.tubes.get(1).isFull()) {\n            Ball ball = testGameState.tubes.get(0).removeBall();\n            testGameState.tubes.get(1).addBall(ball);\n        }\n\n        testGameState.checkWinCondition();\n        System.out.println(\"✅ Livello di test creato correttamente\");\n        return testGameState;\n    }\n\n    /**\n     * ✅ Crea tutte le palline per il livello\n     */\n    private List<Ball> createAllBalls() {\n        List<Ball> balls = new ArrayList<>();\n        Ball.Color[] colors = level.getAvailableColors();\n        int ballId = 0;\n\n        for (Ball.Color color : colors) {\n            for (int i = 0; i < level.getBallsPerColor(); i++) {\n                balls.add(new Ball(color, ballId++));\n            }\n        }\n\n        return balls;\n    }\n\n    /**\n     * ✅ Distribuisce le palline in modo semplice\n     */\n    private void distributeBallsSimple(List<Ball> balls) {\n        int ballIndex = 0;\n        int tubesWithBalls = level.getNumberOfColors(); // Solo i primi N tubi\n\n        for (int tubeIndex = 0; tubeIndex < tubesWithBalls && ballIndex < balls.size(); tubeIndex++) {\n            Tube tube = tubes.get(tubeIndex);\n\n            // Riempi il tubo fino alla capacità\n            for (int i = 0; i < level.getTubeCapacity() && ballIndex < balls.size(); i++) {\n                tube.addBall(balls.get(ballIndex++));\n            }\n        }\n    }\n\n    /**\n     * Esegue una mossa spostando una pallina da un tubo all'altro\n     */\n    public boolean makeMove(int fromTubeId, int toTubeId) {\n        if (fromTubeId == toTubeId || gameWon) {\n            return false;\n        }\n\n        Tube fromTube = getTubeById(fromTubeId);\n        Tube toTube = getTubeById(toTubeId);\n\n        if (fromTube == null || toTube == null) {\n            return false;\n        }\n\n        if (fromTube.canMoveTo(toTube)) {\n            Ball ball = fromTube.removeBall();\n            toTube.addBall(ball);\n            moves++;\n\n            checkWinCondition();\n            return true;\n        }\n\n        return false;\n    }\n\n    /**\n     * Verifica se il gioco è stato vinto\n     */\n    private void checkWinCondition() {\n        for (Tube tube : tubes) {\n            if (!tube.isEmpty() && !tube.isComplete()) {\n                gameWon = false;\n                return;\n            }\n        }\n        gameWon = true;\n    }\n\n    /**\n     * Restituisce il tubo con l'ID specificato\n     */\n    public Tube getTubeById(int id) {\n        return tubes.stream()\n                .filter(tube -> tube.getId() == id)\n                .findFirst()\n                .orElse(null);\n    }\n\n    /**\n     * Restituisce il tubo all'indice specificato\n     */\n    public Tube getTube(int index) {\n        if (index >= 0 && index < tubes.size()) {\n            return tubes.get(index);\n        }\n        return null;\n    }\n\n    /**\n     * Restituisce una lista di tutte le mosse possibili nello stato corrente\n     */\n    public List<Move> getPossibleMoves() {\n        List<Move> possibleMoves = new ArrayList<>();\n\n        for (Tube fromTube : tubes) {\n            if (fromTube.isEmpty()) continue;\n\n            for (Tube toTube : tubes) {\n                if (fromTube.getId() == toTube.getId()) continue;\n\n                if (fromTube.canMoveTo(toTube)) {\n                    possibleMoves.add(new Move(fromTube.getId(), toTube.getId()));\n                }\n            }\n        }\n\n        return possibleMoves;\n    }\n\n    /**\n     * Crea una copia profonda dello stato del gioco\n     */\n    public GameState copy() {\n        return new GameState(this);\n    }\n\n    // === METODI AGGIUNTIVI PER ASP SOLVER ===\n\n    /**\n     * Restituisce il numero di tubi\n     */\n    public int getNumberOfTubes() {\n        return tubes.size();\n    }\n\n    /**\n     * Restituisce il numero di colori nel gioco\n     */\n    public int getNumberOfColors() {\n        return level.getNumberOfColors();\n    }\n\n    /**\n     * Restituisce la capacità dei tubi\n     */\n    public int getTubeCapacity() {\n        return level.getTubeCapacity();\n    }\n\n    // === GETTERS ===\n\n    public GameLevel getLevel() {\n        return level;\n    }\n\n    public List<Tube> getTubes() {\n        return new ArrayList<>(tubes);\n    }\n\n\n    public int getCurrentLevelNumber() {\n        return currentLevelNumber;\n    }\n\n    public int getMoves() {\n        return moves;\n    }\n\n    public boolean isGameWon() {\n        return gameWon;\n    }\n\n    /**\n     * Metodo per ottenere statistiche del generatore di livelli\n     */\n    public static String getGenerationStats() {\n        try {\n            LevelGenerator generator = getLevelGenerator();\n            return String.format(\"Generazione livelli - Successi: %d, Tentativi: %d, Tasso successo: %.1f%%\",\n                    generator.getSuccessfulGenerations(),\n                    generator.getTotalAttempts(),\n                    generator.getSuccessRate() * 100);\n        } catch (Exception e) {\n            return \"Statistiche non disponibili\";\n        }\n    }\n\n    /**\n     * Pulizia delle risorse statiche\n     */\n    public static void cleanup() {\n        try {\n            if (levelGenerator != null) {\n                levelGenerator.cleanup();\n            }\n        } catch (Exception e) {\n            System.err.println(\"Errore nella pulizia: \" + e.getMessage());\n        }\n    }\n\n    /**\n     * Classe interna per rappresentare una mossa\n     */\n    public static class Move {\n        private final int fromTubeId;\n        private final int toTubeId;\n\n        public Move(int fromTubeId, int toTubeId) {\n            this.fromTubeId = fromTubeId;\n            this.toTubeId = toTubeId;\n        }\n\n        public int getFromTubeId() {\n            return fromTubeId;\n        }\n\n        public int getToTubeId() {\n            return toTubeId;\n        }\n\n        @Override\n        public boolean equals(Object obj) {\n            if (this == obj) return true;\n            if (obj == null || getClass() != obj.getClass()) return false;\n            Move move = (Move) obj;\n            return fromTubeId == move.fromTubeId && toTubeId == move.toTubeId;\n        }\n\n        @Override\n        public int hashCode() {\n            return Objects.hash(fromTubeId, toTubeId);\n        }\n\n        @Override\n        public String toString() {\n            return String.format(\"Move{from=%d, to=%d}\", fromTubeId, toTubeId);\n        }\n    }\n}",
+                    "language": "java"
+                },
+                "codebaseEnabled": true
+            },
+            "createdAt": 1755965982654,
+            "isInternal": false,
+            "rawContent": {
+                "type": "doc",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Fix this:"
+                            },
+                            {
+                                "type": "codeBlock",
+                                "attrs": {
+                                    "language": "java"
+                                },
+                                "content": [
+                                    {
+                                        "type": "text",
+                                        "text": "/**\n     * Costruttore principale - utilizza il LevelGenerator\n     */\n    public GameState(GameLevel level, int currentLevelNumber) {\n        this.level = level;\n        this.currentLevelNumber = currentLevelNumber;\n        this.moves = 0;"
+                                    }
+                                ]
+                            },
+                            {
+                                "type": "text",
+                                "text": "'GameState(GameLevel, int)' is already defined in 'it.unical.informatica.model.GameState'"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "autoAppliedRules": []
+        },
+        {
+            "id": "962b8934-fafc-4321-8894-5a102b0e5513",
+            "role": "system",
+            "content": [
+                {
+                    "type": "errorText",
+                    "text": "Could not establish websocket connection. Please try again later.",
+                    "actions": [
+                        {
+                            "type": "externalAction",
+                            "title": "Regenerate",
+                            "action": "regenerateLastAnswer"
+                        }
+                    ]
+                }
+            ],
+            "createdAt": 1755966008074,
+            "isInternal": false
+        }
+    ],
+    "isAgent": true,
+    "isCustomAgent": false,
+    "isUnitTestsAgent": false,
+    "isE2EAgent": false,
+    "isWebDevAgent": false,
+    "isQnaAgent": false,
+    "isRepoInfoAgent": false
+}
+}
