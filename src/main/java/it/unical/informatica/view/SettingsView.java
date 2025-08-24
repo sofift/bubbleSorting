@@ -1,5 +1,6 @@
 package it.unical.informatica.view;
 
+import it.unical.informatica.model.GameLevel;
 import it.unical.mat.embasp.languages.IllegalAnnotationException;
 import it.unical.mat.embasp.languages.ObjectNotValidException;
 import javafx.scene.Scene;
@@ -8,7 +9,6 @@ import javafx.scene.layout.*;
 import javafx.scene.text.Text;
 import javafx.geometry.Pos;
 import javafx.geometry.Insets;
-import it.unical.informatica.model.GameLevel;
 import it.unical.informatica.controller.GameEventHandler;
 import java.util.Map;
 import java.util.function.Consumer;

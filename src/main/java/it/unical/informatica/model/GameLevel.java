@@ -1,82 +1,154 @@
 package it.unical.informatica.model;
 
 /**
- * Enumeration che definisce i diversi livelli di difficoltà del gioco
+ * Enumerazione che rappresenta i livelli di difficoltà del gioco.
+ * Ogni difficoltà ha specifiche configurazioni per numero di tubi,
+ * colori e tubi vuoti.
  */
 public enum GameLevel {
+    EASY("Facile", 6, 4, 2, 5),
+    MEDIUM("Medio", 7, 5, 2, 5),
+    HARD("Difficile", 9, 7, 2, 5);
 
-    EASY(1, "Facile", 6, 4, 4),      // 6 tubi, 4 colori, 4 palline per colore
-    MEDIUM(2, "Medio", 7, 5, 4),     // 7 tubi, 5 colori, 4 palline per colore
-    HARD(3, "Difficile", 9, 7, 4);   // 9 tubi, 7 colori, 4 palline per colore
-
-    private final int levelNumber;
     private final String displayName;
     private final int numberOfTubes;
     private final int numberOfColors;
-    private final int ballsPerColor;
-    private final int tubeCapacity;
+    private final int emptyTubes;
+    private final int maxLevels;
 
-    GameLevel(int levelNumber, String displayName, int numberOfTubes,
-              int numberOfColors, int ballsPerColor) {
-        this.levelNumber = levelNumber;
+    GameLevel(String displayName, int numberOfTubes, int numberOfColors, int emptyTubes, int maxLevels) {
         this.displayName = displayName;
         this.numberOfTubes = numberOfTubes;
         this.numberOfColors = numberOfColors;
-        this.ballsPerColor = ballsPerColor;
-        this.tubeCapacity = ballsPerColor; // Capacità uguale al numero di palline per colore
+        this.emptyTubes = emptyTubes;
+        this.maxLevels = maxLevels;
     }
 
-    public int getLevelNumber() {
-        return levelNumber;
-    }
-
+    /**
+     * Ottiene il nome visualizzato della difficoltà
+     * @return Nome da mostrare all'utente
+     */
     public String getDisplayName() {
         return displayName;
     }
 
+    /**
+     * Ottiene il numero totale di tubi per questa difficoltà
+     * @return Numero di tubi
+     */
     public int getNumberOfTubes() {
         return numberOfTubes;
     }
 
+    /**
+     * Ottiene il numero di colori diversi per questa difficoltà
+     * @return Numero di colori
+     */
     public int getNumberOfColors() {
         return numberOfColors;
     }
 
-    public int getBallsPerColor() {
-        return ballsPerColor;
-    }
-
-    public int getTubeCapacity() {
-        return tubeCapacity;
-    }
-
     /**
-     * Calcola il numero di tubi vuoti (per i movimenti)
+     * Ottiene il numero di tubi vuoti all'inizio del gioco
+     * @return Numero di tubi vuoti
      */
     public int getEmptyTubes() {
-        return numberOfTubes - numberOfColors;
+        return emptyTubes;
     }
 
     /**
-     * Calcola il numero totale di palline nel gioco
+     * Ottiene il numero massimo di livelli per questa difficoltà
+     * @return Numero massimo di livelli
+     */
+    public int getMaxLevels() {
+        return maxLevels;
+    }
+
+    /**
+     * Ottiene il numero di tubi con palline all'inizio
+     * @return Numero di tubi pieni
+     */
+    public int getFilledTubes() {
+        return numberOfTubes - emptyTubes;
+    }
+
+    /**
+     * Ottiene la capacità di ogni tubo (numero di palline per tubo)
+     * @return Capacità del tubo
+     */
+    public int getTubeCapacity() {
+        return 4; // Standard per tutti i livelli
+    }
+
+    /**
+     * Ottiene il numero totale di palline nel gioco
+     * @return Numero totale di palline
      */
     public int getTotalBalls() {
-        return numberOfColors * ballsPerColor;
+        return numberOfColors * getTubeCapacity();
     }
 
     /**
-     * Restituisce i colori disponibili per questo livello
+     * Controlla se un numero di livello è valido per questa difficoltà
+     * @param levelNumber Numero del livello da controllare
+     * @return true se il livello è valido
      */
-    public Ball.Color[] getAvailableColors() {
-        Ball.Color[] allColors = Ball.Color.values();
-        Ball.Color[] levelColors = new Ball.Color[numberOfColors];
-        System.arraycopy(allColors, 0, levelColors, 0, numberOfColors);
-        return levelColors;
+    public boolean isValidLevelNumber(int levelNumber) {
+        return levelNumber >= 1 && levelNumber <= maxLevels;
+    }
+
+    /**
+     * Ottiene la difficoltà successiva
+     * @return Difficoltà successiva o null se è già la più alta
+     */
+    public GameLevel getNextLevel() {
+        switch (this) {
+            case EASY: return MEDIUM;
+            case MEDIUM: return HARD;
+            case HARD: return null; // Nessun livello successivo
+            default: return null;
+        }
+    }
+
+    /**
+     * Ottiene la difficoltà precedente
+     * @return Difficoltà precedente o null se è già la più bassa
+     */
+    public GameLevel getPreviousLevel() {
+        switch (this) {
+            case MEDIUM: return EASY;
+            case HARD: return MEDIUM;
+            case EASY: return null; // Nessun livello precedente
+            default: return null;
+        }
+    }
+
+    /**
+     * Converte una stringa in GameLevel
+     * @param levelName Nome della difficoltà
+     * @return GameLevel corrispondente
+     * @throws IllegalArgumentException se la difficoltà non esiste
+     */
+    public static GameLevel fromString(String levelName) {
+        if (levelName == null || levelName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Nome difficoltà non può essere null o vuoto");
+        }
+
+        try {
+            return GameLevel.valueOf(levelName.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            // Prova con il display name
+            for (GameLevel level : values()) {
+                if (level.displayName.equalsIgnoreCase(levelName.trim())) {
+                    return level;
+                }
+            }
+            throw new IllegalArgumentException("Difficoltà non valida: " + levelName);
+        }
     }
 
     @Override
     public String toString() {
-        return String.format("%s (%d tubi, %d colori)",
-                displayName, numberOfTubes, numberOfColors);
+        return displayName + " (" + numberOfTubes + " tubi, " + numberOfColors + " colori)";
     }
 }

@@ -1,9 +1,8 @@
 package it.unical.informatica.controller;
 
-import javafx.stage.Stage;
 import it.unical.informatica.model.GameLevel;
+import javafx.stage.Stage;
 import it.unical.informatica.view.MenuView;
-import it.unical.informatica.view.GameView;
 
 /**
  * Controller per il menu principale del gioco

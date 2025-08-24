@@ -1,7 +1,7 @@
 package it.unical.informatica.controller;
 
-import javafx.stage.Stage;
 import it.unical.informatica.model.GameLevel;
+import javafx.stage.Stage;
 import it.unical.informatica.view.LevelSelectionView;
 
 /**

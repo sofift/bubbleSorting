@@ -1,0 +1,195 @@
+{
+  "levels": {
+    "EASY": [
+      {
+        "level": 1,
+        "tubes": [
+          ["RED", "BLUE", "RED", "BLUE"],
+          ["GREEN", "YELLOW", "GREEN", "YELLOW"],
+          ["RED", "YELLOW", "BLUE", "GREEN"],
+          ["YELLOW", "GREEN", "BLUE", "RED"],
+          [],
+          []
+        ]
+      },
+      {
+        "level": 2,
+        "tubes": [
+          ["BLUE", "RED", "GREEN", "BLUE"],
+          ["YELLOW", "GREEN", "RED", "YELLOW"],
+          ["RED", "BLUE", "YELLOW", "GREEN"],
+          ["GREEN", "YELLOW", "RED", "BLUE"],
+          [],
+          []
+        ]
+      },
+      {
+        "level": 3,
+        "tubes": [
+          ["GREEN", "YELLOW", "BLUE", "RED"],
+          ["BLUE", "GREEN", "YELLOW", "BLUE"],
+          ["RED", "RED", "GREEN", "YELLOW"],
+          ["YELLOW", "BLUE", "RED", "GREEN"],
+          [],
+          []
+        ]
+      },
+      {
+        "level": 4,
+        "tubes": [
+          ["YELLOW", "BLUE", "RED", "GREEN"],
+          ["RED", "YELLOW", "BLUE", "GREEN"],
+          ["GREEN", "RED", "YELLOW", "BLUE"],
+          ["BLUE", "GREEN", "YELLOW", "RED"],
+          [],
+          []
+        ]
+      },
+      {
+        "level": 5,
+        "tubes": [
+          ["BLUE", "GREEN", "YELLOW", "RED"],
+          ["RED", "BLUE", "GREEN", "YELLOW"],
+          ["YELLOW", "RED", "BLUE", "GREEN"],
+          ["GREEN", "YELLOW", "RED", "BLUE"],
+          [],
+          []
+        ]
+      }
+    ],
+    "MEDIUM": [
+      {
+        "level": 1,
+        "tubes": [
+          ["RED", "BLUE", "GREEN", "YELLOW"],
+          ["ORANGE", "RED", "BLUE", "GREEN"],
+          ["YELLOW", "ORANGE", "RED", "BLUE"],
+          ["GREEN", "YELLOW", "ORANGE", "RED"],
+          ["BLUE", "GREEN", "YELLOW", "ORANGE"],
+          [],
+          []
+        ]
+      },
+      {
+        "level": 2,
+        "tubes": [
+          ["ORANGE", "GREEN", "RED", "BLUE"],
+          ["YELLOW", "ORANGE", "GREEN", "RED"],
+          ["BLUE", "YELLOW", "ORANGE", "GREEN"],
+          ["RED", "BLUE", "YELLOW", "ORANGE"],
+          ["GREEN", "RED", "BLUE", "YELLOW"],
+          [],
+          []
+        ]
+      },
+      {
+        "level": 3,
+        "tubes": [
+          ["BLUE", "ORANGE", "YELLOW", "GREEN"],
+          ["RED", "BLUE", "ORANGE", "YELLOW"],
+          ["GREEN", "RED", "BLUE", "ORANGE"],
+          ["YELLOW", "GREEN", "RED", "BLUE"],
+          ["ORANGE", "YELLOW", "GREEN", "RED"],
+          [],
+          []
+        ]
+      },
+      {
+        "level": 4,
+        "tubes": [
+          ["GREEN", "YELLOW", "RED", "ORANGE"],
+          ["BLUE", "GREEN", "YELLOW", "RED"],
+          ["ORANGE", "BLUE", "GREEN", "YELLOW"],
+          ["RED", "ORANGE", "BLUE", "GREEN"],
+          ["YELLOW", "RED", "ORANGE", "BLUE"],
+          [],
+          []
+        ]
+      },
+      {
+        "level": 5,
+        "tubes": [
+          ["YELLOW", "RED", "ORANGE", "BLUE"],
+          ["GREEN" , "YELLOW", "RED", "ORANGE"],
+          ["BLUE", "GREEN", "YELLOW", "RED"],
+          ["ORANGE", "BLUE", "GREEN", "YELLOW"],
+          ["RED", "ORANGE", "BLUE", "GREEN"],
+          [],
+          []
+        ]
+      }
+    ],
+    "HARD": [
+      {
+        "level": 1,
+        "tubes": [
+          ["RED", "BLUE", "GREEN", "YELLOW"],
+          ["ORANGE", "PURPLE", "RED", "BLUE"],
+          ["GREEN", "YELLOW", "ORANGE", "PURPLE"],
+          ["RED", "BLUE", "GREEN", "YELLOW"],
+          ["ORANGE", "PURPLE", "RED", "BLUE"],
+          ["GREEN", "YELLOW", "ORANGE", "PURPLE"],
+          ["PURPLE", "ORANGE", "YELLOW", "GREEN"],
+          [],
+          []
+        ]
+      },
+      {
+        "level": 2,
+        "tubes": [
+          ["PURPLE", "GREEN", "ORANGE", "YELLOW"],
+          ["RED", "PURPLE", "GREEN", "ORANGE"],
+          ["YELLOW", "RED", "PURPLE", "GREEN"],
+          ["ORANGE", "YELLOW", "RED", "PURPLE"],
+          ["GREEN", "ORANGE", "YELLOW", "RED"],
+          ["PURPLE", "GREEN", "ORANGE", "YELLOW"],
+          ["BLUE", "BLUE", "BLUE", "BLUE"],
+          [],
+          []
+        ]
+      },
+      {
+        "level": 3,
+        "tubes": [
+          ["ORANGE", "YELLOW", "PURPLE", "GREEN"],
+          ["RED", "ORANGE", "YELLOW", "PURPLE"],
+          ["GREEN", "RED", "ORANGE", "YELLOW"],
+          ["PURPLE", "GREEN", "RED", "ORANGE"],
+          ["YELLOW", "PURPLE", "GREEN", "RED"],
+          ["BLUE", "PINK", "BLUE", "PINK"],
+          ["PINK", "BLUE", "PINK", "BLUE"],
+          [],
+          []
+        ]
+      },
+      {
+        "level": 4,
+        "tubes": [
+          ["PINK", "BLUE", "GREEN", "YELLOW"],
+          ["ORANGE", "PINK", "BLUE", "GREEN"],
+          ["YELLOW", "ORANGE", "PINK", "BLUE"],
+          ["GREEN", "YELLOW", "ORANGE", "PINK"],
+          ["BLUE", "GREEN", "YELLOW", "ORANGE"],
+          ["PINK", "BLUE", "GREEN", "YELLOW"],
+          ["PURPLE", "RED", "PURPLE", "RED"],
+          [],
+          []
+        ]
+      },
+      {
+        "level": 5,
+        "tubes": [
+          ["RED", "PURPLE", "PINK", "ORANGE"],
+          ["YELLOW", "RED", "PURPLE", "PINK"],
+          ["ORANGE", "YELLOW", "RED", "PURPLE"],
+          ["PINK", "ORANGE", "YELLOW", "RED"],
+          ["PURPLE", "PINK", "ORANGE", "YELLOW"],
+          ["GREEN", "BLUE", "GREEN", "BLUE"],
+          ["BLUE", "GREEN", "BLUE", "GREEN"],
+          [],
+          []
+        ]
+      }
+    ]
+  }
+}

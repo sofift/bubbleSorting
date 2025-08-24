@@ -1,278 +1,270 @@
 package it.unical.informatica.model;
 
+import it.unical.informatica.asp.AspSolver;
+import it.unical.mat.embasp.base.InputProgram;
+
 import java.util.*;
 
 /**
- * Rappresenta lo stato corrente del gioco - VERSIONE COMPLETA AGGIORNATA
+ * Rappresenta lo stato completo del gioco Bubble Sorting.
+ * VERSIONE CORRETTA - Carica SEMPRE i livelli dal file JSON, mai casuali!
  */
 public class GameState {
-
-    private GameLevel level;           // Rimosso final per createTestLevel
+    private final GameLevel level;
+    private final int levelNumber;
     private final List<Tube> tubes;
-    private int currentLevelNumber;    // Rimosso final per createTestLevel
+    private final Stack<Move> moveHistory;
     private int moves;
     private boolean gameWon;
-
-    // ✅ LEVEL MANAGER STATICO per gestione livelli
-    private static LevelManager levelManager;
-
-    // ✅ COSTRUTTORE PRIVATO VUOTO per createTestLevel
-    private GameState() {
-        this.level = null;
-        this.tubes = new ArrayList<>();
-        this.currentLevelNumber = 0;
-        this.moves = 0;
-        this.gameWon = false;
-    }
-
-    // ✅ INIZIALIZZAZIONE LAZY per LevelManager
-    private static LevelManager getLevelManager() {
-        if (levelManager == null) {
-            levelManager = new LevelManager();
-        }
-        return levelManager;
-    }
+    private long startTime;
+    private long endTime;
 
     /**
-     * Costruttore principale - utilizza il LevelManager per ottenere livelli validi
+     * Costruttore per creare un nuovo stato del gioco
+     * @param level Livello di difficoltà
+     * @param levelNumber Numero del livello (1-5)
      */
-    public GameState(GameLevel level, int currentLevelNumber) {
+    public GameState(GameLevel level, int levelNumber) {
         this.level = level;
-        this.currentLevelNumber = currentLevelNumber;
+        this.levelNumber = levelNumber;
+        this.tubes = new ArrayList<>();
+        this.moveHistory = new Stack<>();
         this.moves = 0;
         this.gameWon = false;
-        this.tubes = new ArrayList<>();
+        this.startTime = System.currentTimeMillis();
 
-        try {
-            // ✅ USA IL LEVEL MANAGER per ottenere livelli validi e risolvibili
-            GameState generatedState = getLevelManager().createGameState(level, currentLevelNumber);
-
-            // Copia i tubi dal livello generato
-            for (Tube tube : generatedState.getTubes()) {
-                this.tubes.add(tube.copy());
-            }
-
-            System.out.println("✅ Livello caricato con successo: " + level.getDisplayName() +
-                    " Livello " + currentLevelNumber);
-
-        } catch (Exception e) {
-            System.err.println("⚠️ Errore nel caricamento del livello, uso fallback: " + e.getMessage());
-            // ✅ FALLBACK: Inizializzazione manuale semplice
-            initializeFallback();
-        }
-
-        checkWinCondition();
+        initializeTubes();
+        loadLevelFromJSON(); // ✅ SEMPRE dal JSON, mai casuale!
     }
 
     /**
-     * ✅ FALLBACK: Inizializzazione manuale semplice
+     * Inizializza i tubi vuoti
      */
-    private void initializeFallback() {
-        System.out.println("🔄 Inizializzando livello con metodo fallback...");
-
-        // Crea tutti i tubi
+    private void initializeTubes() {
         for (int i = 0; i < level.getNumberOfTubes(); i++) {
             tubes.add(new Tube(i, level.getTubeCapacity()));
         }
-
-        // Crea e distribuisce le palline in modo semplice
-        List<Ball> allBalls = createAllBalls();
-        Collections.shuffle(allBalls);
-        distributeBallsSimple(allBalls);
     }
 
     /**
-     * Copy constructor per creare una copia di un GameState
+     * ✅ CORREZIONE: Carica SEMPRE la configurazione dal file JSON
      */
-    public GameState(GameState other) {
-        this.level = other.level;
-        this.currentLevelNumber = other.currentLevelNumber;
-        this.moves = other.moves;
-        this.gameWon = other.gameWon;
-        this.tubes = new ArrayList<>();
+    private void loadLevelFromJSON() {
+        System.out.println("📁 Caricamento livello da JSON: " + level.getDisplayName() + " - Livello " + levelNumber);
 
-        for (Tube tube : other.tubes) {
-            this.tubes.add(tube.copy());
+        LevelLoader levelLoader = new LevelLoader();
+        try {
+            // ✅ USA SEMPRE IL LEVELLOADER - mai generazione casuale!
+            levelLoader.loadLevel(this, level, levelNumber);
+            System.out.println("✅ Livello caricato con successo dal JSON");
+
+            // Debug: stampa la configurazione caricata
+            printLoadedConfiguration();
+
+        } catch (LevelLoader.LevelLoadException e) {
+            System.err.println("❌ ERRORE CRITICO: Impossibile caricare il livello dal JSON: " + e.getMessage());
+
+            // ❌ NON usare fallback casuale - crea configurazione di emergenza deterministica
+            createEmergencyLevel();
         }
     }
 
     /**
-     * Costruttore privato per creare GameState da tubi personalizzati
+     * ✅ Crea una configurazione di emergenza DETERMINISTICA (non casuale)
+     * Usata solo se il file JSON è completamente inaccessibile
      */
-    private GameState(GameLevel level, int currentLevelNumber, List<Tube> tubes) {
-        this.level = level;
-        this.currentLevelNumber = currentLevelNumber;
-        this.moves = 0;
-        this.gameWon = false;
-        this.tubes = new ArrayList<>();
+    private void createEmergencyLevel() {
+        System.out.println("🚨 Creazione configurazione di emergenza deterministica...");
 
+        // Pulisce tutti i tubi
         for (Tube tube : tubes) {
-            this.tubes.add(tube.copy());
+            tube.clear();
         }
 
-        checkWinCondition();
+        // Configurazione di emergenza semplice e deterministica per il livello EASY
+        if (level == GameLevel.EASY) {
+            createEmergencyEasyLevel();
+        } else if (level == GameLevel.MEDIUM) {
+            createEmergencyMediumLevel();
+        } else if (level == GameLevel.HARD) {
+            createEmergencyHardLevel();
+        }
+
+        System.out.println("✅ Configurazione di emergenza creata");
     }
 
     /**
-     * Crea un GameState con tubi personalizzati (per testing e LevelManager)
+     * Configurazione di emergenza per livello EASY
      */
-    public static GameState createFromTubes(GameLevel level, int levelNumber, List<Tube> customTubes) {
-        return new GameState(level, levelNumber, customTubes);
+    private void createEmergencyEasyLevel() {
+        // Configurazione fissa per EASY - Livello 1 (simile al JSON ma semplificata)
+        BallColor[] colors = {BallColor.RED, BallColor.BLUE, BallColor.GREEN, BallColor.YELLOW};
+
+        // Tubo 1: RED, BLUE, RED, BLUE (dal basso verso l'alto)
+        tubes.get(0).addBall(new Ball(colors[0])); // RED
+        tubes.get(0).addBall(new Ball(colors[1])); // BLUE
+        tubes.get(0).addBall(new Ball(colors[0])); // RED
+        tubes.get(0).addBall(new Ball(colors[1])); // BLUE
+
+        // Tubo 2: GREEN, YELLOW, GREEN, YELLOW
+        tubes.get(1).addBall(new Ball(colors[2])); // GREEN
+        tubes.get(1).addBall(new Ball(colors[3])); // YELLOW
+        tubes.get(1).addBall(new Ball(colors[2])); // GREEN
+        tubes.get(1).addBall(new Ball(colors[3])); // YELLOW
+
+        // Tubo 3: RED, YELLOW, BLUE, GREEN
+        tubes.get(2).addBall(new Ball(colors[0])); // RED
+        tubes.get(2).addBall(new Ball(colors[3])); // YELLOW
+        tubes.get(2).addBall(new Ball(colors[1])); // BLUE
+        tubes.get(2).addBall(new Ball(colors[2])); // GREEN
+
+        // Tubo 4: YELLOW, GREEN, BLUE, RED
+        tubes.get(3).addBall(new Ball(colors[3])); // YELLOW
+        tubes.get(3).addBall(new Ball(colors[2])); // GREEN
+        tubes.get(3).addBall(new Ball(colors[1])); // BLUE
+        tubes.get(3).addBall(new Ball(colors[0])); // RED
+
+        // Tubi 5 e 6 rimangono vuoti
     }
 
     /**
-     * ✅ Crea un GameState deterministico per testing (bypassa il generatore casuale)
+     * Configurazione di emergenza per livello MEDIUM
      */
-    public static GameState createTestLevel(GameLevel level, int levelNumber) {
-        System.out.println("🧪 Creando livello di test per " + level.getDisplayName() + " " + levelNumber);
+    private void createEmergencyMediumLevel() {
+        BallColor[] colors = {BallColor.RED, BallColor.BLUE, BallColor.GREEN, BallColor.YELLOW, BallColor.ORANGE};
 
-        // Crea GameState con costruttore privato vuoto
-        GameState testGameState = new GameState();
-        testGameState.level = level;
-        testGameState.currentLevelNumber = levelNumber;
-        testGameState.moves = 0;
-        testGameState.gameWon = false;
-        testGameState.tubes.clear();
-
-        // Crea configurazione di test semplice e deterministica
-        for (int i = 0; i < level.getNumberOfTubes(); i++) {
-            testGameState.tubes.add(new Tube(i, level.getTubeCapacity()));
-        }
-
-        // Configurazione di test: ogni colore nel proprio tubo, poi mescola leggermente
-        Ball.Color[] colors = level.getAvailableColors();
-        int ballId = 0;
-
-        for (int colorIndex = 0; colorIndex < colors.length; colorIndex++) {
-            Tube tube = testGameState.tubes.get(colorIndex);
-            Ball.Color color = colors[colorIndex];
-
-            for (int i = 0; i < level.getBallsPerColor(); i++) {
-                tube.addBall(new Ball(color, ballId++));
+        // Distribuzione semplice per MEDIUM
+        for (int tubeIndex = 0; tubeIndex < level.getFilledTubes(); tubeIndex++) {
+            for (int ballPos = 0; ballPos < level.getTubeCapacity(); ballPos++) {
+                int colorIndex = (tubeIndex + ballPos) % colors.length;
+                tubes.get(tubeIndex).addBall(new Ball(colors[colorIndex]));
             }
         }
-
-        // Mescola solo una pallina per rendere il test interessante
-        if (testGameState.tubes.size() > 1 &&
-                !testGameState.tubes.get(0).isEmpty() &&
-                !testGameState.tubes.get(1).isFull()) {
-            Ball ball = testGameState.tubes.get(0).removeBall();
-            testGameState.tubes.get(1).addBall(ball);
-        }
-
-        testGameState.checkWinCondition();
-        System.out.println("✅ Livello di test creato correttamente");
-        return testGameState;
     }
 
     /**
-     * ✅ Crea tutte le palline per il livello
+     * Configurazione di emergenza per livello HARD
      */
-    private List<Ball> createAllBalls() {
-        List<Ball> balls = new ArrayList<>();
-        Ball.Color[] colors = level.getAvailableColors();
-        int ballId = 0;
+    private void createEmergencyHardLevel() {
+        BallColor[] colors = {BallColor.RED, BallColor.BLUE, BallColor.GREEN,
+                BallColor.YELLOW, BallColor.ORANGE, BallColor.PURPLE, BallColor.PINK};
 
-        for (Ball.Color color : colors) {
-            for (int i = 0; i < level.getBallsPerColor(); i++) {
-                balls.add(new Ball(color, ballId++));
+        // Distribuzione semplice per HARD
+        for (int tubeIndex = 0; tubeIndex < level.getFilledTubes(); tubeIndex++) {
+            for (int ballPos = 0; ballPos < level.getTubeCapacity(); ballPos++) {
+                int colorIndex = (tubeIndex + ballPos) % colors.length;
+                tubes.get(tubeIndex).addBall(new Ball(colors[colorIndex]));
             }
         }
-
-        return balls;
     }
 
     /**
-     * ✅ Distribuisce le palline in modo semplice
+     * Stampa la configurazione caricata per debug
      */
-    private void distributeBallsSimple(List<Ball> balls) {
-        int ballIndex = 0;
-        int tubesWithBalls = level.getNumberOfColors(); // Solo i primi N tubi
+    private void printLoadedConfiguration() {
+        System.out.println("🔍 Configurazione caricata:");
+        for (int i = 0; i < tubes.size(); i++) {
+            Tube tube = tubes.get(i);
+            List<Ball> balls = tube.getBalls();
 
-        for (int tubeIndex = 0; tubeIndex < tubesWithBalls && ballIndex < balls.size(); tubeIndex++) {
-            Tube tube = tubes.get(tubeIndex);
-
-            // Riempi il tubo fino alla capacità
-            for (int i = 0; i < level.getTubeCapacity() && ballIndex < balls.size(); i++) {
-                tube.addBall(balls.get(ballIndex++));
+            System.out.print("   Tubo " + (i + 1) + ": ");
+            if (balls.isEmpty()) {
+                System.out.println("vuoto");
+            } else {
+                for (int j = 0; j < balls.size(); j++) {
+                    if (j > 0) System.out.print(", ");
+                    System.out.print(balls.get(j).getColor().name());
+                }
+                System.out.println();
             }
         }
     }
 
     /**
      * Esegue una mossa spostando una pallina da un tubo all'altro
+     * @param fromTubeId ID del tubo di origine
+     * @param toTubeId ID del tubo di destinazione
+     * @return true se la mossa è stata eseguita con successo
      */
     public boolean makeMove(int fromTubeId, int toTubeId) {
-        if (fromTubeId == toTubeId || gameWon) {
+        if (gameWon || fromTubeId == toTubeId) {
             return false;
         }
 
-        Tube fromTube = getTubeById(fromTubeId);
-        Tube toTube = getTubeById(toTubeId);
-
-        if (fromTube == null || toTube == null) {
+        if (fromTubeId < 0 || fromTubeId >= tubes.size() ||
+                toTubeId < 0 || toTubeId >= tubes.size()) {
             return false;
         }
 
-        if (fromTube.canMoveTo(toTube)) {
-            Ball ball = fromTube.removeBall();
-            toTube.addBall(ball);
-            moves++;
+        Tube fromTube = tubes.get(fromTubeId);
+        Tube toTube = tubes.get(toTubeId);
 
-            checkWinCondition();
-            return true;
+        if (fromTube.isEmpty()) {
+            return false;
         }
 
-        return false;
-    }
-
-    /**
-     * Verifica se il gioco è stato vinto
-     */
-    private void checkWinCondition() {
-        for (Tube tube : tubes) {
-            if (!tube.isEmpty() && !tube.isComplete()) {
-                gameWon = false;
-                return;
-            }
+        Ball ballToMove = fromTube.getTopBall();
+        if (!toTube.canAddBall(ballToMove)) {
+            return false;
         }
-        gameWon = true;
+
+        // Esegui la mossa
+        Ball movedBall = fromTube.removeBall();
+        toTube.addBall(movedBall);
+
+        // Registra la mossa nella storia
+        Move move = new Move(fromTubeId, toTubeId, movedBall);
+        moveHistory.push(move);
+        moves++;
+
+        // Controlla se il gioco è vinto
+        checkWinCondition();
+
+        return true;
     }
 
     /**
-     * Restituisce il tubo con l'ID specificato
+     * Annulla l'ultima mossa
+     * @return true se l'annullamento è riuscito
      */
-    public Tube getTubeById(int id) {
-        return tubes.stream()
-                .filter(tube -> tube.getId() == id)
-                .findFirst()
-                .orElse(null);
-    }
-
-    /**
-     * Restituisce il tubo all'indice specificato
-     */
-    public Tube getTube(int index) {
-        if (index >= 0 && index < tubes.size()) {
-            return tubes.get(index);
+    public boolean undoMove() {
+        if (moveHistory.isEmpty() || gameWon) {
+            return false;
         }
-        return null;
+
+        Move lastMove = moveHistory.pop();
+        Tube fromTube = tubes.get(lastMove.getFromTubeId());
+        Tube toTube = tubes.get(lastMove.getToTubeId());
+
+        // Inverti la mossa
+        Ball ballToReturn = toTube.removeBall();
+        fromTube.addBall(ballToReturn);
+
+        moves--;
+        gameWon = false; // Il gioco non può più essere vinto dopo l'undo
+
+        return true;
     }
 
     /**
-     * Restituisce una lista di tutte le mosse possibili nello stato corrente
+     * Ottiene tutte le mosse possibili dal stato corrente
+     * @return Lista delle mosse valide
      */
     public List<Move> getPossibleMoves() {
         List<Move> possibleMoves = new ArrayList<>();
 
-        for (Tube fromTube : tubes) {
+        for (int fromId = 0; fromId < tubes.size(); fromId++) {
+            Tube fromTube = tubes.get(fromId);
             if (fromTube.isEmpty()) continue;
 
-            for (Tube toTube : tubes) {
-                if (fromTube.getId() == toTube.getId()) continue;
+            Ball topBall = fromTube.getTopBall();
 
-                if (fromTube.canMoveTo(toTube)) {
-                    possibleMoves.add(new Move(fromTube.getId(), toTube.getId()));
+            for (int toId = 0; toId < tubes.size(); toId++) {
+                if (fromId == toId) continue;
+
+                Tube toTube = tubes.get(toId);
+                if (toTube.canAddBall(topBall)) {
+                    possibleMoves.add(new Move(fromId, toId, topBall));
                 }
             }
         }
@@ -281,213 +273,138 @@ public class GameState {
     }
 
     /**
-     * Crea una copia profonda dello stato del gioco
+     * Controlla la condizione di vittoria
      */
-    public GameState copy() {
-        return new GameState(this);
-    }
+    private void checkWinCondition() {
+        boolean allCompleted = true;
+        int completedTubes = 0;
 
-    // === METODI AGGIUNTIVI PER ASP SOLVER ===
-
-    /**
-     * Restituisce il numero di tubi
-     */
-    public int getNumberOfTubes() {
-        return tubes.size();
-    }
-
-    /**
-     * Restituisce il numero di colori nel gioco
-     */
-    public int getNumberOfColors() {
-        return level.getNumberOfColors();
-    }
-
-    /**
-     * Restituisce la capacità dei tubi
-     */
-    public int getTubeCapacity() {
-        return level.getTubeCapacity();
-    }
-
-    /**
-     * ✅ METODO AGGIUNTO per ASP - Restituisce la pallina in una posizione specifica
-     */
-    public String getBall(int tubeIndex, int position) {
-        if (tubeIndex < 0 || tubeIndex >= tubes.size()) {
-            return null;
-        }
-
-        Tube tube = tubes.get(tubeIndex);
-        List<Ball> balls = tube.getBalls();
-
-        if (position < 0 || position >= balls.size()) {
-            return null;
-        }
-
-        return balls.get(position).getColor().name();
-    }
-
-    // === GETTERS ===
-
-    public GameLevel getLevel() {
-        return level;
-    }
-
-    public List<Tube> getTubes() {
-        return new ArrayList<>(tubes);
-    }
-
-    public int getCurrentLevelNumber() {
-        return currentLevelNumber;
-    }
-
-    public int getMoves() {
-        return moves;
-    }
-
-    public boolean isGameWon() {
-        return gameWon;
-    }
-
-    // === METODI STATICI DI UTILITÀ ===
-
-    /**
-     * Metodo per ottenere statistiche del level manager
-     */
-    public static String getLevelStats() {
-        try {
-            return getLevelManager().getCacheStats();
-        } catch (Exception e) {
-            return "Statistiche non disponibili: " + e.getMessage();
-        }
-    }
-
-    /**
-     * Pre-genera tutti i livelli per una difficoltà (per prestazioni migliori)
-     */
-    public static void preGenerateLevels(GameLevel difficulty) {
-        try {
-            getLevelManager().preGenerateLevels(difficulty);
-        } catch (Exception e) {
-            System.err.println("Errore nella pre-generazione: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Pulisce la cache dei livelli
-     */
-    public static void clearLevelCache() {
-        try {
-            if (levelManager != null) {
-                levelManager.clearCache();
-            }
-        } catch (Exception e) {
-            System.err.println("Errore nella pulizia: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Verifica se il sistema ASP è funzionante
-     */
-    public static boolean isAspWorking() {
-        try {
-            return getLevelManager().isAspWorking();
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    /**
-     * Ottiene informazioni diagnostiche del sistema
-     */
-    public static String getDiagnosticInfo() {
-        try {
-            return getLevelManager().getDiagnosticInfo();
-        } catch (Exception e) {
-            return "Errore nell'ottenere info diagnostiche: " + e.getMessage();
-        }
-    }
-
-    /**
-     * Test rapido del sistema
-     */
-    public static boolean runSystemTest() {
-        try {
-            return getLevelManager().runSystemTest();
-        } catch (Exception e) {
-            System.err.println("Test del sistema fallito: " + e.getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Pulizia delle risorse statiche
-     */
-    public static void cleanup() {
-        try {
-            if (levelManager != null) {
-                levelManager.clearCache();
-                levelManager = null;
-            }
-        } catch (Exception e) {
-            System.err.println("Errore nella pulizia: " + e.getMessage());
-        }
-    }
-    public static GameState fromTubes(List<Tube> tubeList) {
-        GameState gs = new GameState();   // usa il costruttore privato vuoto già presente
-        gs.level = null;                  // nessuna info di livello (coerente con LevelGenerator)
-        gs.currentLevelNumber = 0;
-        gs.moves = 0;
-        gs.gameWon = false;
-
-        gs.tubes.clear();
-        if (tubeList != null) {
-            for (Tube t : tubeList) {
-                gs.tubes.add(t.copy());   // copia difensiva
+        for (Tube tube : tubes) {
+            if (!tube.isEmpty()) {
+                if (tube.isCompleted()) {
+                    completedTubes++;
+                } else {
+                    allCompleted = false;
+                    break;
+                }
             }
         }
 
-        gs.checkWinCondition();
-        return gs;
+        // Il gioco è vinto se tutti i tubi pieni sono completati
+        // e abbiamo esattamente il numero di colori previsto
+        if (allCompleted && completedTubes == level.getNumberOfColors()) {
+            gameWon = true;
+            endTime = System.currentTimeMillis();
+        }
     }
 
     /**
-     * Classe interna per rappresentare una mossa
+     * Ottiene il punteggio basato su mosse e tempo
+     * @return Punteggio calcolato
      */
-    public static class Move {
-        private final int fromTubeId;
-        private final int toTubeId;
+    public int getScore() {
+        if (!gameWon) return 0;
 
-        public Move(int fromTubeId, int toTubeId) {
-            this.fromTubeId = fromTubeId;
-            this.toTubeId = toTubeId;
+        long timeInSeconds = (endTime - startTime) / 1000;
+        int baseScore = 1000;
+        int movesPenalty = moves * 10;
+        int timePenalty = (int)(timeInSeconds * 2);
+
+        return Math.max(100, baseScore - movesPenalty - timePenalty);
+    }
+
+    /**
+     * Ottiene il tempo di gioco in secondi
+     * @return Tempo di gioco
+     */
+    public long getGameTimeSeconds() {
+        long currentTime = gameWon ? endTime : System.currentTimeMillis();
+        return (currentTime - startTime) / 1000;
+    }
+
+    /**
+     * Resetta il gioco allo stato iniziale
+     */
+    public void reset() {
+        tubes.forEach(Tube::clear);
+        moveHistory.clear();
+        moves = 0;
+        gameWon = false;
+        startTime = System.currentTimeMillis();
+        loadLevelFromJSON(); // ✅ Ricarica sempre dal JSON
+    }
+
+    /**
+     * ✅ METODO CORRETTO per addGameFacts in AspSolver
+     * Aggiunge i fatti del gioco all'InputProgram
+     */
+    private void addGameFactsToProgram(InputProgram program, GameState gameState, int horizon) throws Exception {
+        // Numero di tubi
+        program.addObjectInput(new AspSolver.NumTubesFact(gameState.getTubes().size()));
+
+        // Capacità dei tubi
+        program.addObjectInput(new AspSolver.CapacityFact(gameState.getLevel().getTubeCapacity()));
+
+        // Orizzonte temporale
+        program.addObjectInput(new AspSolver.HorizonFact(horizon));
+
+        // Fatti sui tubi e palline
+        List<Tube> tubes = gameState.getTubes();
+        for (int tubeIndex = 0; tubeIndex < tubes.size(); tubeIndex++) {
+            Tube tube = tubes.get(tubeIndex);
+
+            // Tubo (numerazione da 1 per ASP)
+            program.addObjectInput(new AspSolver.TubeFact(tubeIndex + 1));
+
+            // Palline nel tubo
+            List<Ball> balls = tube.getBalls();
+            for (int position = 0; position < balls.size(); position++) {
+                Ball ball = balls.get(position);
+                program.addObjectInput(new AspSolver.BallFact(
+                        tubeIndex + 1, // tubo (1-indexed)
+                        position,      // posizione (0-indexed)
+                        ball.getColor().name().toLowerCase()
+                ));
+            }
         }
 
-        public int getFromTubeId() {
-            return fromTubeId;
+        System.out.println("✅ Fatti ASP aggiunti al programma via EmbASP");
+    }
+
+    // Getters
+    public GameLevel getLevel() { return level; }
+    public int getLevelNumber() { return levelNumber; }
+    public List<Tube> getTubes() { return new ArrayList<>(tubes); }
+    public Tube getTube(int id) { return id >= 0 && id < tubes.size() ? tubes.get(id) : null; }
+    public int getMoves() { return moves; }
+    public boolean isGameWon() { return gameWon; }
+    public Stack<Move> getMoveHistory() { return new Stack<Move>() {{ addAll(moveHistory); }}; }
+    public boolean canUndo() { return !moveHistory.isEmpty() && !gameWon; }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("GameState[level=").append(level)
+                .append(", levelNumber=").append(levelNumber)
+                .append(", moves=").append(moves)
+                .append(", won=").append(gameWon)
+                .append("]\nTubes:\n");
+
+        for (int i = 0; i < tubes.size(); i++) {
+            sb.append("  ").append(i + 1).append(": ");
+            Tube tube = tubes.get(i);
+            if (tube.isEmpty()) {
+                sb.append("vuoto");
+            } else {
+                List<Ball> balls = tube.getBalls();
+                for (int j = 0; j < balls.size(); j++) {
+                    if (j > 0) sb.append(", ");
+                    sb.append(balls.get(j).getColor().name());
+                }
+            }
+            sb.append("\n");
         }
 
-        public int getToTubeId() {
-            return toTubeId;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) return true;
-            if (obj == null || getClass() != obj.getClass()) return false;
-            Move move = (Move) obj;
-            return fromTubeId == move.fromTubeId && toTubeId == move.toTubeId;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(fromTubeId, toTubeId);
-        }
-
-        @Override
-        public String toString() {
-            return String.format("Move{from=%d, to=%d}", fromTubeId, toTubeId);
-        }
+        return sb.toString();
     }
 }

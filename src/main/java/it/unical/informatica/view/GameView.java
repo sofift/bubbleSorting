@@ -1,244 +1,126 @@
 package it.unical.informatica.view;
 
-import it.unical.mat.embasp.languages.IllegalAnnotationException;
-import it.unical.mat.embasp.languages.ObjectNotValidException;
+import it.unical.informatica.controller.GameEventHandler;
+import it.unical.informatica.controller.GamePreferences;
+import it.unical.informatica.model.*;
+import javafx.animation.*;
+import javafx.application.Platform;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import javafx.scene.text.Text;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
-import javafx.geometry.Pos;
-import javafx.geometry.Insets;
-import javafx.animation.*;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Text;
 import javafx.util.Duration;
-import javafx.application.Platform;
-import it.unical.informatica.model.*;
-import it.unical.informatica.controller.GameEventHandler;
-import java.util.*;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 
 /**
- * Vista principale del gioco con tubi e palline
- * Gestisce l'interfaccia grafica, le animazioni e l'interazione utente
+ * Vista principale del gioco Bubble Sorting.
+ * Gestisce la visualizzazione dell'interfaccia grafica, le animazioni
+ * e l'interazione con l'utente seguendo il pattern MVC.
  */
 public class GameView {
 
-    // Costanti per il layout
-    private static final double BALL_SIZE = 25;
-    private static final double TUBE_WIDTH = 70;
-    private static final double TUBE_SPACING = 15;
-    private static final double ANIMATION_DURATION = 0.6;
+    // ===== CONFIGURAZIONE =====
+    private static final double TUBE_WIDTH = 80;
+    private static final double TUBE_HEIGHT = 200;
+    private static final double BALL_RADIUS = 15;
+    private static final double TUBE_SPACING = 20;
+    private static final double ANIMATION_DURATION = 300; // millisecondi
 
-    // Componenti principali
+    // ===== COMPONENTI CORE =====
+    private final GameLevel gameLevel;
     private Scene scene;
-    private StackPane rootPane;
-    private BorderPane mainContainer;
-    private VBox gameHeader;
+    private VBox mainContainer;
     private HBox gameArea;
-    private VBox loadingOverlay;
+    private VBox controlPanel;
+    private VBox statusPanel;
 
-    // Componenti UI
-    private Text levelText;
+    // ===== STATO DELLA VISTA =====
+    private GameState currentGameState;
+    private List<TubeView> tubeViews;
+    private int selectedTubeId = -1;
+    private boolean animationsEnabled;
+    private boolean soundEnabled;
+    private boolean hintsEnabled;
+
+    // ===== COMPONENTI UI =====
     private Text movesText;
+    private Text timeText;
+    private Text messageText;
+    private Button restartButton;
+    private Button menuButton;
     private Button hintButton;
     private Button solveButton;
     private Button undoButton;
-    private ProgressIndicator loadingIndicator;
-    private Text loadingText;
+    private ProgressDialog progressDialog;
 
-    // Gestione tubi e gioco
-    private final GameLevel gameLevel;
-    private final List<TubeView> tubeViews;
-    private GameState currentGameState;
-    private TubeView selectedTube;
-
-    // Impostazioni
-    private boolean animationsEnabled = true;
-    private boolean soundEnabled = true;
-    private boolean hintsEnabled = true;
-
-    // Event handlers
+    // ===== EVENT HANDLERS =====
     private GameEventHandler.TubeClickHandler onTubeClicked;
     private GameEventHandler.ActionHandler onRestartRequested;
     private GameEventHandler.ActionHandler onMenuRequested;
     private GameEventHandler.ActionHandler onHintRequested;
     private GameEventHandler.ActionHandler onSolveRequested;
     private GameEventHandler.ActionHandler onUndoRequested;
+    private GameEventHandler.MoveHandler onMoveRequested; // ✅ AGGIUNTO
+
+    // ===============================
+    // COSTRUTTORE E INIZIALIZZAZIONE
+    // ===============================
 
     /**
-     * Costruttore
+     * Costruttore della GameView
+     * @param gameLevel Livello di difficoltà del gioco
      */
     public GameView(GameLevel gameLevel) {
         this.gameLevel = gameLevel;
         this.tubeViews = new ArrayList<>();
 
-        initializeComponents();
-        createGameScene();
-        setupStyles();
+        // Carica le preferenze
+        GamePreferences preferences = GamePreferences.getInstance();
+        this.animationsEnabled = preferences.isAnimationsEnabled();
+        this.soundEnabled = preferences.isSoundEnabled();
+        this.hintsEnabled = preferences.isShowHints();
+
+        initializeView();
+        System.out.println("✅ GameView inizializzata per " + gameLevel.getDisplayName());
     }
 
     /**
-     * Inizializza tutti i componenti
+     * Inizializza tutti i componenti della vista
      */
-    private void initializeComponents() {
-        // Crea i tubi
-        for (int i = 0; i < gameLevel.getNumberOfTubes(); i++) {
-            TubeView tubeView = new TubeView(i, gameLevel.getTubeCapacity());
-            tubeViews.add(tubeView);
+    private void initializeView() {
+        try {
+            createMainLayout();
+            createGameArea();
+            createControlPanel();
+            createStatusPanel();
+            createScene();
+
+            System.out.println("✅ Layout della vista creato");
+
+        } catch (Exception e) {
+            System.err.println("❌ Errore nell'inizializzazione della vista: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     /**
-     * Crea la scena del gioco
+     * Crea il layout principale
      */
-    private void createGameScene() {
-        // Container principale
-        mainContainer = new BorderPane();
+    private void createMainLayout() {
+        mainContainer = new VBox();
         mainContainer.getStyleClass().add("game-container");
-
-        // Header del gioco
-        createGameHeader();
-        mainContainer.setTop(gameHeader);
-
-        // Area di gioco con i tubi
-        createGameArea();
-        mainContainer.setCenter(gameArea);
-
-        // Overlay per loading
-        createLoadingOverlay();
-
-        // Root pane con overlay
-        rootPane = new StackPane();
-        rootPane.getChildren().addAll(mainContainer, loadingOverlay);
-
-        // Scena finale
-        scene = new Scene(rootPane, 1000, 700);
-    }
-
-    /**
-     * Crea l'header del gioco con informazioni e controlli
-     */
-    private void createGameHeader() {
-        gameHeader = new VBox();
-        gameHeader.setSpacing(15);
-        gameHeader.setPadding(new Insets(20));
-        gameHeader.getStyleClass().add("game-header");
-
-        // Riga informazioni
-        HBox infoRow = createInfoRow();
-
-        // Riga controlli
-        HBox controlRow = createControlRow();
-
-        gameHeader.getChildren().addAll(infoRow, controlRow);
-    }
-
-    /**
-     * Crea la riga con le informazioni del gioco
-     */
-    private HBox createInfoRow() {
-        HBox infoRow = new HBox();
-        infoRow.setAlignment(Pos.CENTER);
-        infoRow.setSpacing(30);
-
-        levelText = new Text();
-        levelText.getStyleClass().add("game-info");
-
-        movesText = new Text("Mosse: 0");
-        movesText.getStyleClass().add("game-info");
-
-        infoRow.getChildren().addAll(levelText, movesText);
-        return infoRow;
-    }
-
-    /**
-     * Crea la riga con i controlli del gioco
-     */
-    private HBox createControlRow() {
-        HBox controlRow = new HBox();
-        controlRow.setAlignment(Pos.CENTER);
-        controlRow.setSpacing(15);
-
-        // Pulsanti di navigazione
-        Button menuButton = createControlButton("🏠 Menu", "control-button");
-        menuButton.setOnAction(e -> {
-            if (onMenuRequested != null) {
-                try {
-                    onMenuRequested.onAction();
-                } catch (ObjectNotValidException ex) {
-                    throw new RuntimeException(ex);
-                } catch (IllegalAnnotationException ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
-        });
-
-        Button restartButton = createControlButton("🔄 Restart", "control-button");
-        restartButton.setOnAction(e -> {
-            if (onRestartRequested != null) {
-                try {
-                    onRestartRequested.onAction();
-                } catch (ObjectNotValidException ex) {
-                    throw new RuntimeException(ex);
-                } catch (IllegalAnnotationException ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
-        });
-
-        // Pulsanti di aiuto
-        undoButton = createControlButton("↶ Undo", "control-button");
-        undoButton.setOnAction(e -> {
-            if (onUndoRequested != null) {
-                try {
-                    onUndoRequested.onAction();
-                } catch (ObjectNotValidException ex) {
-                    throw new RuntimeException(ex);
-                } catch (IllegalAnnotationException ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
-        });
-
-        hintButton = createControlButton("💡 Suggerimento", "control-button");
-        hintButton.setOnAction(e -> {
-            if (onHintRequested != null) {
-                try {
-                    onHintRequested.onAction();
-                } catch (ObjectNotValidException ex) {
-                    throw new RuntimeException(ex);
-                } catch (IllegalAnnotationException ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
-        });
-
-        solveButton = createControlButton("🤖 Risolvi", "control-button");
-        solveButton.setOnAction(e -> {
-            if (onSolveRequested != null) {
-                try {
-                    onSolveRequested.onAction();
-                } catch (ObjectNotValidException ex) {
-                    throw new RuntimeException(ex);
-                } catch (IllegalAnnotationException ex) {
-                    throw new RuntimeException(ex);
-                }
-            }
-        });
-
-        controlRow.getChildren().addAll(
-                menuButton, restartButton, undoButton, hintButton, solveButton
-        );
-
-        return controlRow;
-    }
-
-    /**
-     * Crea un pulsante di controllo
-     */
-    private Button createControlButton(String text, String styleClass) {
-        Button button = new Button(text);
-        button.getStyleClass().add(styleClass);
-        return button;
+        mainContainer.setSpacing(20);
+        mainContainer.setPadding(new Insets(20));
+        mainContainer.setAlignment(Pos.TOP_CENTER);
     }
 
     /**
@@ -246,548 +128,704 @@ public class GameView {
      */
     private void createGameArea() {
         gameArea = new HBox();
-        gameArea.setAlignment(Pos.CENTER);
+        gameArea.getStyleClass().add("game-area");
         gameArea.setSpacing(TUBE_SPACING);
-        gameArea.setPadding(new Insets(30));
+        gameArea.setAlignment(Pos.CENTER);
+        gameArea.setPadding(new Insets(20));
 
-        // Aggiungi tutti i tubi
-        for (TubeView tubeView : tubeViews) {
+        // Crea i tubi vuoti inizialmente
+        for (int i = 0; i < gameLevel.getNumberOfTubes(); i++) {
+            TubeView tubeView = new TubeView(i);
+            tubeViews.add(tubeView);
             gameArea.getChildren().add(tubeView.getContainer());
-
-            // Configura il click handler per ogni tubo
-            tubeView.setOnClick(() -> {
-                if (onTubeClicked != null) {
-                    onTubeClicked.onTubeClicked(tubeView.getTubeId());
-                }
-            });
         }
+
+        mainContainer.getChildren().add(gameArea);
     }
 
     /**
-     * Crea l'overlay per il loading
+     * Crea il pannello di controllo
      */
-    private void createLoadingOverlay() {
-        loadingOverlay = new VBox();
-        loadingOverlay.getStyleClass().add("loading-indicator");
-        loadingOverlay.setAlignment(Pos.CENTER);
-        loadingOverlay.setSpacing(20);
-        loadingOverlay.setVisible(false);
+    private void createControlPanel() {
+        controlPanel = new VBox();
+        controlPanel.getStyleClass().add("control-panel");
+        controlPanel.setSpacing(15);
+        controlPanel.setAlignment(Pos.CENTER);
 
-        VBox loadingContent = new VBox();
-        loadingContent.getStyleClass().add("loading-content");
-        loadingContent.setAlignment(Pos.CENTER);
-        loadingContent.setSpacing(15);
+        // Riga superiore - pulsanti principali
+        HBox mainButtons = new HBox();
+        mainButtons.setSpacing(10);
+        mainButtons.setAlignment(Pos.CENTER);
 
-        loadingIndicator = new ProgressIndicator();
-        loadingIndicator.setPrefSize(50, 50);
+        restartButton = createControlButton("🔄 Riavvia", "control-button");
+        menuButton = createControlButton("🏠 Menu", "control-button secondary-button");
+        undoButton = createControlButton("⏪ Annulla", "control-button");
 
-        loadingText = new Text("Calcolando...");
-        loadingText.getStyleClass().add("loading-text");
+        mainButtons.getChildren().addAll(restartButton, menuButton, undoButton);
 
-        loadingContent.getChildren().addAll(loadingIndicator, loadingText);
-        loadingOverlay.getChildren().add(loadingContent);
+        // Riga inferiore - pulsanti AI
+        HBox aiButtons = new HBox();
+        aiButtons.setSpacing(10);
+        aiButtons.setAlignment(Pos.CENTER);
+
+        hintButton = createControlButton("💡 Suggerimento", "control-button ai-button");
+        solveButton = createControlButton("🤖 Risolvi", "control-button ai-button");
+
+        aiButtons.getChildren().addAll(hintButton, solveButton);
+
+        // Event handlers
+        setupControlButtonHandlers();
+
+        controlPanel.getChildren().addAll(mainButtons, aiButtons);
+        mainContainer.getChildren().add(controlPanel);
     }
 
     /**
-     * Applica gli stili CSS
+     * Crea il pannello di stato
      */
-    private void setupStyles() {
+    private void createStatusPanel() {
+        statusPanel = new VBox();
+        statusPanel.getStyleClass().add("status-panel");
+        statusPanel.setSpacing(10);
+        statusPanel.setAlignment(Pos.CENTER);
+        statusPanel.setPadding(new Insets(10));
+
+        // Informazioni del livello
+        Text levelInfo = new Text(gameLevel.getDisplayName());
+        levelInfo.getStyleClass().add("level-info");
+
+        // Statistiche di gioco
+        HBox statsBox = new HBox();
+        statsBox.setSpacing(20);
+        statsBox.setAlignment(Pos.CENTER);
+
+        movesText = new Text("Mosse: 0");
+        movesText.getStyleClass().add("stat-text");
+
+        timeText = new Text("Tempo: 00:00");
+        timeText.getStyleClass().add("stat-text");
+
+        statsBox.getChildren().addAll(movesText, timeText);
+
+        // Area messaggi
+        messageText = new Text("");
+        messageText.getStyleClass().add("message-text");
+        messageText.setWrappingWidth(400);
+
+        statusPanel.getChildren().addAll(levelInfo, statsBox, messageText);
+        mainContainer.getChildren().add(statusPanel);
+    }
+
+    /**
+     * Crea la scena principale
+     */
+    private void createScene() {
+        scene = new Scene(mainContainer, 1000, 700);
         scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
     }
 
     /**
-     * Aggiorna la vista con un nuovo stato del gioco
+     * Crea un pulsante di controllo con stile
+     */
+    private Button createControlButton(String text, String styleClass) {
+        Button button = new Button(text);
+        button.getStyleClass().addAll(styleClass.split(" "));
+        return button;
+    }
+
+    /**
+     * Configura gli event handlers per i pulsanti di controllo
+     */
+    private void setupControlButtonHandlers() {
+        restartButton.setOnAction(e -> {
+            if (onRestartRequested != null) {
+                try {
+                    onRestartRequested.onAction();
+                } catch (Exception ex) {
+                    System.err.println("❌ Errore nel restart: " + ex.getMessage());
+                }
+            }
+        });
+
+        menuButton.setOnAction(e -> {
+            if (onMenuRequested != null) {
+                try {
+                    onMenuRequested.onAction();
+                } catch (Exception ex) {
+                    System.err.println("❌ Errore nel menu: " + ex.getMessage());
+                }
+            }
+        });
+
+        undoButton.setOnAction(e -> {
+            if (onUndoRequested != null) {
+                try {
+                    onUndoRequested.onAction();
+                } catch (Exception ex) {
+                    System.err.println("❌ Errore nell'undo: " + ex.getMessage());
+                }
+            }
+        });
+
+        hintButton.setOnAction(e -> {
+            if (onHintRequested != null) {
+                try {
+                    onHintRequested.onAction();
+                } catch (Exception ex) {
+                    System.err.println("❌ Errore nel hint: " + ex.getMessage());
+                }
+            }
+        });
+
+        solveButton.setOnAction(e -> {
+            if (onSolveRequested != null) {
+                try {
+                    onSolveRequested.onAction();
+                } catch (Exception ex) {
+                    System.err.println("❌ Errore nella risoluzione: " + ex.getMessage());
+                }
+            }
+        });
+    }
+
+    // ===============================
+    // AGGIORNAMENTO STATO DI GIOCO
+    // ===============================
+
+    /**
+     * Aggiorna la vista con un nuovo stato di gioco
+     * @param gameState Nuovo stato del gioco
      */
     public void updateGameState(GameState gameState) {
-        this.currentGameState = gameState;
+        if (gameState == null) return;
 
-        // Aggiorna le informazioni nell'header
-        updateGameInfo();
+        try {
+            this.currentGameState = gameState;
 
-        // Aggiorna i tubi
-        updateTubes();
+            // Aggiorna i tubi
+            updateTubes(gameState.getTubes());
 
-        // Reset selezione
-        clearSelection();
+            // Aggiorna le statistiche
+            updateStats(gameState);
+
+            // Aggiorna lo stato dei pulsanti
+            updateButtonStates(gameState);
+
+            System.out.println("✅ Vista aggiornata - Mosse: " + gameState.getMoves());
+
+        } catch (Exception e) {
+            System.err.println("❌ Errore nell'aggiornamento della vista: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     /**
-     * Aggiorna le informazioni del gioco
+     * Aggiorna la visualizzazione dei tubi
      */
-    private void updateGameInfo() {
-        levelText.setText(String.format("%s - Livello %d",
-                currentGameState.getLevel().getDisplayName(),
-                currentGameState.getCurrentLevelNumber()));
-        movesText.setText("Mosse: " + currentGameState.getMoves());
-    }
-
-    /**
-     * Aggiorna tutti i tubi
-     */
-    private void updateTubes() {
-        List<Tube> tubes = currentGameState.getTubes();
+    private void updateTubes(List<Tube> tubes) {
         for (int i = 0; i < tubes.size() && i < tubeViews.size(); i++) {
             tubeViews.get(i).updateTube(tubes.get(i));
         }
     }
 
     /**
+     * Aggiorna le statistiche visualizzate
+     */
+    private void updateStats(GameState gameState) {
+        Platform.runLater(() -> {
+            movesText.setText("Mosse: " + gameState.getMoves());
+
+            long seconds = gameState.getGameTimeSeconds();
+            int minutes = (int) (seconds / 60);
+            int secs = (int) (seconds % 60);
+            timeText.setText(String.format("Tempo: %02d:%02d", minutes, secs));
+        });
+    }
+
+    /**
+     * Aggiorna lo stato dei pulsanti in base al gioco
+     */
+    private void updateButtonStates(GameState gameState) {
+        Platform.runLater(() -> {
+            undoButton.setDisable(!gameState.canUndo());
+
+            if (gameState.isGameWon()) {
+                hintButton.setDisable(true);
+                solveButton.setDisable(true);
+            } else {
+                hintButton.setDisable(!hintsEnabled);
+                solveButton.setDisable(false);
+            }
+        });
+    }
+
+    // ===============================
+    // GESTIONE SELEZIONE TUBI
+    // ===============================
+
+    /**
      * Gestisce la selezione di un tubo
+     * @param tubeId ID del tubo selezionato
+     * @param gameState Stato corrente del gioco
      */
     public void handleTubeSelection(int tubeId, GameState gameState) {
-        TubeView clickedTube = tubeViews.get(tubeId);
-        Tube tube = gameState.getTubeById(tubeId);
-
-        if (selectedTube == null) {
+        if (selectedTubeId == -1) {
             // Prima selezione
-            if (!tube.isEmpty()) {
-                selectTube(clickedTube);
-            }
-        } else if (selectedTube == clickedTube) {
+            selectTube(tubeId, gameState);
+        } else if (selectedTubeId == tubeId) {
             // Deseleziona lo stesso tubo
-            clearSelection();
+            deselectTube();
         } else {
-            // Seconda selezione - esegui mossa
-            executeMoveFromSelection(gameState, selectedTube.getTubeId(), clickedTube.getTubeId());
+            // Seconda selezione - tenta la mossa
+            attemptMove(selectedTubeId, tubeId, gameState);
         }
     }
 
     /**
      * Seleziona un tubo
      */
-    private void selectTube(TubeView tubeView) {
-        selectedTube = tubeView;
-        tubeView.setSelected(true);
-    }
-
-    /**
-     * Pulisce la selezione corrente
-     */
-    private void clearSelection() {
-        if (selectedTube != null) {
-            selectedTube.setSelected(false);
-            selectedTube = null;
-        }
-        clearAllHints();
-    }
-
-    /**
-     * Esegue una mossa dalla selezione
-     */
-    private void executeMoveFromSelection(GameState gameState, int fromTubeId, int toTubeId) {
-        Tube fromTube = gameState.getTubeById(fromTubeId);
-        Tube toTube = gameState.getTubeById(toTubeId);
-
-        if (fromTube == null || toTube == null || !fromTube.canMoveTo(toTube)) {
-            showInvalidMoveAnimation(fromTubeId, toTubeId);
-            clearSelection();
+    private void selectTube(int tubeId, GameState gameState) {
+        Tube tube = gameState.getTube(tubeId);
+        if (tube == null || tube.isEmpty()) {
+            showMessage("Il tubo è vuoto!");
             return;
         }
 
-        // Esegui la mossa nel modello
-        boolean success = gameState.makeMove(fromTubeId, toTubeId);
+        selectedTubeId = tubeId;
+        tubeViews.get(tubeId).setSelected(true);
+        showMessage("Tubo " + (tubeId + 1) + " selezionato. Clicca su un altro tubo per spostare.");
 
-        if (success) {
-            // Anima la mossa
-            animateMove(fromTubeId, toTubeId, () -> {
-                updateGameState(gameState);
-                // Usa la versione semplice del check per le mosse manuali
-                checkWinCondition();
-            });
-        } else {
-            showInvalidMoveAnimation(fromTubeId, toTubeId);
-            clearSelection();
+        // Evidenzia i tubi validi per la mossa
+        highlightValidMoves(tubeId, gameState);
+    }
+
+    /**
+     * Deseleziona il tubo corrente
+     */
+    private void deselectTube() {
+        if (selectedTubeId != -1) {
+            tubeViews.get(selectedTubeId).setSelected(false);
+            selectedTubeId = -1;
+            clearHighlights();
+            showMessage("");
         }
     }
 
     /**
-     * Controlla se il gioco è stato vinto (versione semplice per uso interno)
+     * Tenta di eseguire una mossa
      */
-    private void checkWinCondition() {
-        if (currentGameState.isGameWon()) {
-            showWinAnimation(() -> {
-                showWinDialog(currentGameState.getMoves(), null, null);
-            });
+    private void attemptMove(int fromTubeId, int toTubeId, GameState gameState) {
+        // Verifica se la mossa è valida
+        Tube fromTube = gameState.getTube(fromTubeId);
+        Tube toTube = gameState.getTube(toTubeId);
+
+        if (fromTube == null || toTube == null || fromTube.isEmpty()) {
+            showMessage("Mossa non valida!");
+            deselectTube();
+            return;
+        }
+
+        Ball ballToMove = fromTube.getTopBall();
+        if (!toTube.canAddBall(ballToMove)) {
+            showMessage("Impossibile spostare la pallina qui!");
+            deselectTube();
+            return;
+        }
+
+        // ✅ CORREZIONE: Notifica al GameController di eseguire la mossa
+        if (onMoveRequested != null) {
+            onMoveRequested.onMove(fromTubeId, toTubeId);
+        }
+
+        deselectTube();
+        showMessage(""); // Pulisce il messaggio
+    }
+
+    /**
+     * Evidenzia i tubi dove è possibile spostare la pallina
+     */
+    private void highlightValidMoves(int fromTubeId, GameState gameState) {
+        Tube fromTube = gameState.getTube(fromTubeId);
+        if (fromTube == null || fromTube.isEmpty()) return;
+
+        Ball ballToMove = fromTube.getTopBall();
+
+        for (int i = 0; i < gameState.getTubes().size(); i++) {
+            if (i == fromTubeId) continue;
+
+            Tube targetTube = gameState.getTube(i);
+            if (targetTube != null && targetTube.canAddBall(ballToMove)) {
+                tubeViews.get(i).setHighlighted(true);
+            }
         }
     }
 
     /**
-     * Controlla se il gioco è stato vinto e mostra il dialog appropriato
+     * Rimuove tutti gli highlight dai tubi
      */
-    public void checkWinConditionWithHandlers(GameEventHandler.ActionHandler onNextLevel,
-                                              GameEventHandler.ActionHandler onRestart) {
-        if (currentGameState.isGameWon()) {
-            showWinAnimation(() -> {
-                showWinDialog(currentGameState.getMoves(), onNextLevel, onRestart);
-            });
+    private void clearHighlights() {
+        for (TubeView tubeView : tubeViews) {
+            tubeView.setSelected(false);
+            tubeView.setHighlighted(false);
         }
     }
 
+    // ===============================
+    // ANIMAZIONI
+    // ===============================
+
     /**
-     * Anima una mossa tra due tubi
+     * Anima il movimento di una pallina da un tubo all'altro
      */
-    public void animateMove(int fromTubeId, int toTubeId, GameEventHandler.AnimationCompleteHandler onComplete) {
+    public void animateMove(int fromTubeId, int toTubeId, Runnable onComplete) {
         if (!animationsEnabled) {
-            Platform.runLater(onComplete::onAnimationComplete);
+            // Senza animazione, esegui subito il callback
+            if (onComplete != null) {
+                onComplete.run();
+            }
             return;
         }
 
-        TubeView fromTube = tubeViews.get(fromTubeId);
-        TubeView toTube = tubeViews.get(toTubeId);
+        try {
+            System.out.println("🎬 Avvio animazione: " + fromTubeId + " → " + toTubeId);
 
-        Circle ballToMove = fromTube.getTopBall();
-        if (ballToMove == null) {
-            Platform.runLater(onComplete::onAnimationComplete);
-            return;
-        }
+            // Animazione semplificata
+            Timeline timeline = new Timeline();
+            timeline.setOnFinished(e -> {
+                if (onComplete != null) {
+                    onComplete.run();
+                }
+            });
 
-        // Crea pallina animata
-        Circle animatedBall = createAnimatedBall(ballToMove);
+            // Keyframe semplice per la durata dell'animazione
+            timeline.getKeyFrames().add(
+                    new KeyFrame(Duration.millis(ANIMATION_DURATION))
+            );
+            timeline.play();
 
-        // Calcola posizioni
-        double[] positions = calculateAnimationPositions(fromTube, toTube);
-        double startX = positions[0], startY = positions[1];
-        double endX = positions[2], endY = positions[3];
-
-        // Imposta posizione iniziale
-        animatedBall.setCenterX(startX);
-        animatedBall.setCenterY(startY);
-
-        // Aggiungi alla scena
-        rootPane.getChildren().add(animatedBall);
-        ballToMove.setVisible(false);
-
-        // Crea e avvia animazione
-        Timeline animation = createMoveAnimation(animatedBall, startX, startY, endX, endY);
-        animation.setOnFinished(e -> {
-            rootPane.getChildren().remove(animatedBall);
-            Platform.runLater(onComplete::onAnimationComplete);
-        });
-        animation.play();
-
-        clearSelection();
-    }
-
-    /**
-     * Crea una pallina per l'animazione
-     */
-    private Circle createAnimatedBall(Circle original) {
-        Circle animatedBall = new Circle(original.getRadius());
-        animatedBall.setFill(original.getFill());
-        animatedBall.setStroke(original.getStroke());
-        animatedBall.setStrokeWidth(original.getStrokeWidth());
-        animatedBall.setEffect(original.getEffect());
-        animatedBall.getStyleClass().addAll(original.getStyleClass());
-        animatedBall.getStyleClass().add("moving");
-        return animatedBall;
-    }
-
-    /**
-     * Calcola le posizioni per l'animazione
-     */
-    private double[] calculateAnimationPositions(TubeView fromTube, TubeView toTube) {
-        double startX = fromTube.getCenterX();
-        double startY = fromTube.getTopBallY();
-        double endX = toTube.getCenterX();
-        double endY = toTube.getNextBallY();
-
-        return new double[]{startX, startY, endX, endY};
-    }
-
-    /**
-     * Crea l'animazione di movimento
-     */
-    private Timeline createMoveAnimation(Circle ball, double startX, double startY, double endX, double endY) {
-        Timeline timeline = new Timeline();
-
-        // Movimento verso l'alto
-        KeyFrame upFrame = new KeyFrame(
-                Duration.seconds(ANIMATION_DURATION * 0.3),
-                new KeyValue(ball.centerYProperty(), startY - 50, Interpolator.EASE_OUT)
-        );
-
-        // Movimento orizzontale
-        KeyFrame horizontalFrame = new KeyFrame(
-                Duration.seconds(ANIMATION_DURATION * 0.7),
-                new KeyValue(ball.centerXProperty(), endX, Interpolator.EASE_BOTH)
-        );
-
-        // Movimento verso il basso
-        KeyFrame downFrame = new KeyFrame(
-                Duration.seconds(ANIMATION_DURATION),
-                new KeyValue(ball.centerYProperty(), endY, Interpolator.EASE_IN)
-        );
-
-        timeline.getKeyFrames().addAll(upFrame, horizontalFrame, downFrame);
-        return timeline;
-    }
-
-    /**
-     * Mostra animazione per mossa non valida
-     */
-    public void showInvalidMoveAnimation(int fromTubeId, int toTubeId) {
-        TubeView fromTube = tubeViews.get(fromTubeId);
-        TubeView toTube = tubeViews.get(toTubeId);
-
-        // Animazione di shake
-        for (TubeView tube : Arrays.asList(fromTube, toTube)) {
-            VBox container = tube.getContainer();
-
-            Timeline shake = new Timeline();
-            double originalX = container.getTranslateX();
-
-            KeyFrame[] frames = {
-                    new KeyFrame(Duration.seconds(0.1), new KeyValue(container.translateXProperty(), originalX + 5)),
-                    new KeyFrame(Duration.seconds(0.2), new KeyValue(container.translateXProperty(), originalX - 5)),
-                    new KeyFrame(Duration.seconds(0.3), new KeyValue(container.translateXProperty(), originalX + 3)),
-                    new KeyFrame(Duration.seconds(0.4), new KeyValue(container.translateXProperty(), originalX - 3)),
-                    new KeyFrame(Duration.seconds(0.5), new KeyValue(container.translateXProperty(), originalX))
-            };
-
-            shake.getKeyFrames().addAll(Arrays.asList(frames));
-            shake.play();
+        } catch (Exception e) {
+            System.err.println("❌ Errore nell'animazione: " + e.getMessage());
+            // In caso di errore, esegui comunque il callback
+            if (onComplete != null) {
+                onComplete.run();
+            }
         }
     }
 
     /**
-     * Evidenzia un suggerimento
+     * Mostra l'animazione di vittoria
      */
-    public void highlightHint(int fromTubeId, int toTubeId) {
-        clearAllHints();
+    public void showVictoryAnimation() {
+        if (!animationsEnabled) return;
 
-        tubeViews.get(fromTubeId).setHintSource(true);
-        tubeViews.get(toTubeId).setHintTarget(true);
+        try {
+            // Animazione semplice di celebrazione
+            for (TubeView tubeView : tubeViews) {
+                tubeView.playVictoryAnimation();
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Errore nell'animazione di vittoria: " + e.getMessage());
+        }
+    }
 
-        // Rimuovi hint dopo 3 secondi
-        Timeline removeHint = new Timeline(
-                new KeyFrame(Duration.seconds(3), e -> clearAllHints())
-        );
-        removeHint.play();
+    // ===============================
+    // FUNZIONALITÀ ASP
+    // ===============================
+
+    /**
+     * Mostra un suggerimento visivamente
+     */
+    public void showHint(Move hint) {
+        if (hint == null) return;
+
+        try {
+            Platform.runLater(() -> {
+                // Evidenzia la mossa suggerita
+                tubeViews.get(hint.getFromTubeId()).setHinted(true);
+                tubeViews.get(hint.getToTubeId()).setHinted(true);
+
+                // Rimuovi l'hint dopo qualche secondo
+                Timeline timeline = new Timeline(
+                        new KeyFrame(Duration.seconds(3), e -> clearHints())
+                );
+                timeline.play();
+            });
+
+        } catch (Exception e) {
+            System.err.println("❌ Errore nella visualizzazione del hint: " + e.getMessage());
+        }
     }
 
     /**
-     * Rimuove tutti i suggerimenti
+     * Mostra la soluzione completa
      */
-    private void clearAllHints() {
-        tubeViews.forEach(tube -> {
-            tube.setHintSource(false);
-            tube.setHintTarget(false);
+    public void showSolution(List<Move> solution) {
+        if (solution == null || solution.isEmpty()) return;
+
+        Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Soluzione trovata");
+            alert.setHeaderText("Soluzione in " + solution.size() + " mosse");
+
+            StringBuilder content = new StringBuilder();
+            for (int i = 0; i < Math.min(solution.size(), 10); i++) {
+                Move move = solution.get(i);
+                content.append(String.format("%d. Tubo %d → Tubo %d\n",
+                        i + 1, move.getFromTubeId() + 1, move.getToTubeId() + 1));
+            }
+
+            if (solution.size() > 10) {
+                content.append("... e altre ").append(solution.size() - 10).append(" mosse");
+            }
+
+            alert.setContentText(content.toString());
+            alert.showAndWait();
         });
     }
 
     /**
-     * Mostra animazione di vittoria
+     * Rimuove tutti i suggerimenti visivi
      */
-    public void showWinAnimation(GameEventHandler.AnimationCompleteHandler onComplete) {
-        Timeline celebration = new Timeline();
-
-        for (int i = 0; i < tubeViews.size(); i++) {
-            TubeView tube = tubeViews.get(i);
-            VBox container = tube.getContainer();
-
-            KeyFrame bounceUp = new KeyFrame(
-                    Duration.seconds(0.2 + i * 0.1),
-                    new KeyValue(container.scaleYProperty(), 1.1, Interpolator.EASE_OUT)
-            );
-            KeyFrame bounceDown = new KeyFrame(
-                    Duration.seconds(0.4 + i * 0.1),
-                    new KeyValue(container.scaleYProperty(), 1.0, Interpolator.EASE_IN)
-            );
-
-            celebration.getKeyFrames().addAll(bounceUp, bounceDown);
+    private void clearHints() {
+        for (TubeView tubeView : tubeViews) {
+            tubeView.setHinted(false);
         }
-
-        celebration.setOnFinished(e -> Platform.runLater(onComplete::onAnimationComplete));
-        celebration.play();
     }
 
+    // ===============================
+    // DIALOGHI E MESSAGGI
+    // ===============================
+
     /**
-     * Mostra dialog di vittoria con opzioni
+     * Mostra un messaggio all'utente
      */
-    public void showWinDialog(int moves, GameEventHandler.ActionHandler onNextLevel,
-                              GameEventHandler.ActionHandler onRestart) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Livello Completato!");
-        alert.setHeaderText("🎉 Congratulazioni! 🎉");
+    public void showMessage(String message) {
+        Platform.runLater(() -> {
+            if (messageText != null) {
+                messageText.setText(message);
 
-        int stars = calculateStars(moves);
-        String starsText = "⭐".repeat(stars) + "☆".repeat(3 - stars);
-
-        alert.setContentText(String.format(
-                "Hai completato il livello in %d mosse!\n\n" +
-                        "Valutazione: %s (%d/3 stelle)\n\n" +
-                        "Cosa vuoi fare ora?",
-                moves, starsText, stars));
-
-        alert.getDialogPane().getStylesheets().add(
-                getClass().getResource("/css/style.css").toExternalForm());
-
-        // Pulsanti personalizzati
-        ButtonType nextLevelButton = new ButtonType("Livello Successivo", ButtonBar.ButtonData.OK_DONE);
-        ButtonType restartButton = new ButtonType("Rigioca", ButtonBar.ButtonData.OTHER);
-        ButtonType menuButton = new ButtonType("Menu", ButtonBar.ButtonData.CANCEL_CLOSE);
-
-        alert.getDialogPane().getButtonTypes().setAll(nextLevelButton, restartButton, menuButton);
-
-        alert.showAndWait().ifPresent(response -> {
-            if (response == nextLevelButton && onNextLevel != null) {
-                try {
-                    onNextLevel.onAction();
-                } catch (ObjectNotValidException e) {
-                    throw new RuntimeException(e);
-                } catch (IllegalAnnotationException e) {
-                    throw new RuntimeException(e);
-                }
-            } else if (response == restartButton && onRestart != null) {
-                try {
-                    onRestart.onAction();
-                } catch (ObjectNotValidException e) {
-                    throw new RuntimeException(e);
-                } catch (IllegalAnnotationException e) {
-                    throw new RuntimeException(e);
-                }
-            } else if (response == menuButton && onMenuRequested != null) {
-                try {
-                    onMenuRequested.onAction();
-                } catch (ObjectNotValidException e) {
-                    throw new RuntimeException(e);
-                } catch (IllegalAnnotationException e) {
-                    throw new RuntimeException(e);
+                // Fade out automatico dopo 3 secondi
+                if (!message.isEmpty()) {
+                    Timeline fadeOut = new Timeline(
+                            new KeyFrame(Duration.seconds(3), e -> {
+                                if (messageText.getText().equals(message)) {
+                                    messageText.setText("");
+                                }
+                            })
+                    );
+                    fadeOut.play();
                 }
             }
         });
     }
 
     /**
-     * Mostra il dialog di completamento di tutti i livelli
+     * Mostra il dialogo di vittoria
      */
-    public void showCompletionDialog(GameEventHandler.ActionHandler onBackToMenu) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Modalità Completata!");
-        alert.setHeaderText("🏆 Hai completato tutti i livelli! 🏆");
-        alert.setContentText(String.format(
-                "Complimenti! Hai completato tutti i 5 livelli della modalità %s!\n\n" +
-                        "Prova le altre modalità per una sfida ancora maggiore!",
-                gameLevel.getDisplayName()));
+    public void showVictoryDialog(int moves, int score, Runnable onNextLevel,
+                                  Runnable onRestart, Runnable onMenu) {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Livello Completato!");
+            alert.setHeaderText("🎉 Congratulazioni!");
 
-        alert.getDialogPane().getStylesheets().add(
-                getClass().getResource("/css/style.css").toExternalForm());
+            String content = String.format(
+                    "Hai completato il livello!\n\n" +
+                            "📊 Statistiche:\n" +
+                            "• Mosse utilizzate: %d\n" +
+                            "• Punteggio: %d punti\n" +
+                            "• Livello: %s\n\n" +
+                            "Cosa vuoi fare ora?",
+                    moves, score, gameLevel.getDisplayName()
+            );
 
-        // Pulsanti
-        ButtonType newDifficultyButton = new ButtonType("Nuova Difficoltà", ButtonBar.ButtonData.OK_DONE);
-        ButtonType menuButton = new ButtonType("Menu Principale", ButtonBar.ButtonData.CANCEL_CLOSE);
+            alert.setContentText(content);
 
-        alert.getDialogPane().getButtonTypes().setAll(newDifficultyButton, menuButton);
+            // Pulsanti personalizzati
+            ButtonType nextButton = new ButtonType("Livello Successivo");
+            ButtonType restartButton = new ButtonType("Ricomincia");
+            ButtonType menuButton = new ButtonType("Menu Principale");
 
-        alert.showAndWait().ifPresent(response -> {
-            if (onBackToMenu != null) {
-                try {
-                    onBackToMenu.onAction();
-                } catch (ObjectNotValidException e) {
-                    throw new RuntimeException(e);
-                } catch (IllegalAnnotationException e) {
-                    throw new RuntimeException(e);
+            alert.getButtonTypes().setAll(nextButton, restartButton, menuButton);
+
+            alert.showAndWait().ifPresent(response -> {
+                if (response == nextButton && onNextLevel != null) {
+                    onNextLevel.run();
+                } else if (response == restartButton && onRestart != null) {
+                    onRestart.run();
+                } else if (onMenu != null) {
+                    onMenu.run();
                 }
-            }
+            });
         });
     }
 
+    // ===============================
+    // IMPOSTAZIONI
+    // ===============================
+
     /**
-     * Calcola le stelle in base al numero di mosse
+     * Abilita o disabilita le animazioni
      */
-    private int calculateStars(int moves) {
-        int optimalMoves = switch (gameLevel) {
-            case EASY -> 20;
-            case MEDIUM -> 30;
-            case HARD -> 45;
-        };
-
-        if (moves <= optimalMoves) return 3;
-        if (moves <= optimalMoves * 1.5) return 2;
-        if (moves <= optimalMoves * 2) return 1;
-        return 0;
-    }
-
-    // Metodi per gestire loading e messaggi
-
-    public void showLoadingHint(boolean show) {
-        loadingOverlay.setVisible(show);
-        loadingText.setText(show ? "Calcolando suggerimento..." : "");
-    }
-
-    public void showLoadingSolution(boolean show) {
-        loadingOverlay.setVisible(show);
-        loadingText.setText(show ? "Trovando soluzione..." : "");
-    }
-
-    public void showNoHintAvailable() {
-        showTemporaryMessage("Nessun suggerimento disponibile", Alert.AlertType.INFORMATION);
-    }
-
-    public void showHintError() {
-        showTemporaryMessage("Errore nel calcolo del suggerimento", Alert.AlertType.WARNING);
-    }
-
-    public void showNoSolutionFound() {
-        showTemporaryMessage("Nessuna soluzione trovata", Alert.AlertType.INFORMATION);
-    }
-
-    public void showSolutionError() {
-        showTemporaryMessage("Errore nella risoluzione automatica", Alert.AlertType.ERROR);
-    }
-
-    public void showUndoNotAvailable() {
-        showTemporaryMessage("Undo non disponibile", Alert.AlertType.INFORMATION);
+    public void setAnimationsEnabled(boolean enabled) {
+        this.animationsEnabled = enabled;
+        System.out.println("🎬 Animazioni " + (enabled ? "abilitate" : "disabilitate"));
     }
 
     /**
-     * Mostra un messaggio temporaneo
+     * Abilita o disabilita il suono
      */
-    private void showTemporaryMessage(String message, Alert.AlertType type) {
-        Alert alert = new Alert(type);
-        alert.setTitle("Informazione");
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.getDialogPane().getStylesheets().add(
-                getClass().getResource("/css/style.css").toExternalForm());
-        alert.show();
-
-        // Chiudi automaticamente dopo 2 secondi
-        Timeline autoClose = new Timeline(
-                new KeyFrame(Duration.seconds(2), e -> alert.close())
-        );
-        autoClose.play();
+    public void setSoundEnabled(boolean enabled) {
+        this.soundEnabled = enabled;
+        System.out.println("🔊 Suono " + (enabled ? "abilitato" : "disabilitato"));
     }
 
     /**
-     * Resetta la vista
+     * Abilita o disabilita i suggerimenti
      */
-    public void resetView() {
-        clearSelection();
-        tubeViews.forEach(TubeView::reset);
+    public void setHintsEnabled(boolean enabled) {
+        this.hintsEnabled = enabled;
+        hintButton.setDisable(!enabled);
+        System.out.println("💡 Suggerimenti " + (enabled ? "abilitati" : "disabilitati"));
     }
 
-    // Getters e Setters
+    // ===============================
+    // CLASSE INTERNA TUBEVIEW
+    // ===============================
+
+    /**
+     * Classe per rappresentare visivamente un singolo tubo
+     */
+    private class TubeView {
+        private final int tubeId;
+        private VBox container;
+        private Rectangle tubeBase;
+        private VBox ballContainer;
+        private List<Circle> ballCircles;
+        private boolean selected = false;
+        private boolean highlighted = false;
+        private boolean hinted = false;
+
+        public TubeView(int tubeId) {
+            this.tubeId = tubeId;
+            this.ballCircles = new ArrayList<>();
+            initializeTube();
+        }
+
+        private void initializeTube() {
+            container = new VBox();
+            container.setAlignment(Pos.BOTTOM_CENTER);
+            container.setSpacing(5);
+            container.setPrefWidth(TUBE_WIDTH);
+            container.getStyleClass().add("tube-container");
+
+            // Numero del tubo
+            Text tubeNumber = new Text(String.valueOf(tubeId + 1));
+            tubeNumber.getStyleClass().add("tube-number");
+
+            // Container per le palline
+            ballContainer = new VBox();
+            ballContainer.setAlignment(Pos.BOTTOM_CENTER);
+            ballContainer.setPrefHeight(TUBE_HEIGHT);
+            ballContainer.setMaxHeight(TUBE_HEIGHT);
+
+            // Base del tubo
+            tubeBase = new Rectangle(TUBE_WIDTH, 10);
+            tubeBase.getStyleClass().add("tube-base");
+            tubeBase.setFill(Color.DARKGRAY);
+
+            container.getChildren().addAll(tubeNumber, ballContainer, tubeBase);
+
+            // Click handler
+            container.setOnMouseClicked(e -> {
+                if (onTubeClicked != null) {
+                    onTubeClicked.onTubeClicked(tubeId);
+                }
+            });
+        }
+
+        public void updateTube(Tube tube) {
+            ballContainer.getChildren().clear();
+            ballCircles.clear();
+
+            for (Ball ball : tube.getBalls()) {
+                Circle ballCircle = createBallCircle(ball);
+                ballCircles.add(ballCircle);
+                ballContainer.getChildren().add(0, ballCircle); // Aggiungi in cima
+            }
+
+            updateVisualState();
+        }
+
+        private Circle createBallCircle(Ball ball) {
+            Circle circle = new Circle(BALL_RADIUS);
+            circle.getStyleClass().add("ball");
+
+            // Imposta il colore
+            String colorHex = ball.getColor().getHexColor();
+            circle.setFill(Color.web(colorHex));
+            circle.setStroke(Color.DARKGRAY);
+            circle.setStrokeWidth(1);
+
+            return circle;
+        }
+
+        public void setSelected(boolean selected) {
+            this.selected = selected;
+            updateVisualState();
+        }
+
+        public void setHighlighted(boolean highlighted) {
+            this.highlighted = highlighted;
+            updateVisualState();
+        }
+
+        public void setHinted(boolean hinted) {
+            this.hinted = hinted;
+            updateVisualState();
+        }
+
+        private void updateVisualState() {
+            container.getStyleClass().removeAll("selected", "highlighted", "hinted");
+
+            if (selected) {
+                container.getStyleClass().add("selected");
+            }
+            if (highlighted) {
+                container.getStyleClass().add("highlighted");
+            }
+            if (hinted) {
+                container.getStyleClass().add("hinted");
+            }
+        }
+
+        public void playVictoryAnimation() {
+            if (!animationsEnabled) return;
+
+            RotateTransition rotation = new RotateTransition(Duration.seconds(0.5), container);
+            rotation.setByAngle(360);
+            rotation.setCycleCount(2);
+            rotation.play();
+        }
+
+        public VBox getContainer() {
+            return container;
+        }
+    }
+
+    // ===============================
+    // GETTERS E SETTERS
+    // ===============================
 
     public Scene getScene() {
         return scene;
     }
 
-    public void setAnimationsEnabled(boolean enabled) {
-        this.animationsEnabled = enabled;
+    public GameLevel getGameLevel() {
+        return gameLevel;
     }
 
-    public void setSoundEnabled(boolean enabled) {
-        this.soundEnabled = enabled;
-    }
-
-    public void setHintsEnabled(boolean enabled) {
-        this.hintsEnabled = enabled;
-        hintButton.setDisable(!enabled);
-    }
-
-    // Event handlers
-
+    // Event handlers setters
     public void setOnTubeClicked(GameEventHandler.TubeClickHandler handler) {
         this.onTubeClicked = handler;
     }
@@ -812,189 +850,7 @@ public class GameView {
         this.onUndoRequested = handler;
     }
 
-    /**
-     * Classe interna per rappresentare un tubo nella vista
-     */
-    private static class TubeView {
-        private final int tubeId;
-        private final int capacity;
-        private final VBox container;
-        private final List<Circle> balls;
-        private final double tubeHeight;
-
-        private Runnable onClick;
-
-        public TubeView(int tubeId, int capacity) {
-            this.tubeId = tubeId;
-            this.capacity = capacity;
-            this.balls = new ArrayList<>();
-            this.tubeHeight = capacity * (BALL_SIZE * 2 + 5) + 20;
-
-            // Crea container
-            container = new VBox();
-            container.getStyleClass().add("tube");
-            container.setAlignment(Pos.BOTTOM_CENTER);
-            container.setPrefSize(TUBE_WIDTH, tubeHeight);
-            container.setSpacing(2);
-            container.setPadding(new Insets(5));
-
-            // Event handler
-            container.setOnMouseClicked(e -> {
-                if (onClick != null) onClick.run();
-            });
-        }
-
-        /**
-         * Aggiorna il tubo con un nuovo stato
-         */
-        public void updateTube(Tube tube) {
-            container.getChildren().clear();
-            balls.clear();
-
-            List<Ball> tubeBalls = tube.getBalls();
-            for (Ball ball : tubeBalls) {
-                Circle ballCircle = createBallCircle(ball);
-                balls.add(ballCircle);
-                container.getChildren().add(0, ballCircle);
-            }
-        }
-
-        /**
-         * Crea un cerchio per rappresentare una pallina
-         */
-        private Circle createBallCircle(Ball ball) {
-            Circle circle = new Circle(BALL_SIZE);
-
-            // Applica colore con gradiente
-            javafx.scene.paint.Paint ballPaint = getBallColor(ball.getColor());
-            circle.setFill(ballPaint);
-
-            // Bordo e ombra
-            circle.setStroke(javafx.scene.paint.Color.web("#333333"));
-            circle.setStrokeWidth(1.5);
-
-            javafx.scene.effect.DropShadow shadow = new javafx.scene.effect.DropShadow();
-            shadow.setColor(javafx.scene.paint.Color.web("#00000080"));
-            shadow.setRadius(4);
-            shadow.setOffsetX(2);
-            shadow.setOffsetY(2);
-            circle.setEffect(shadow);
-
-            circle.getStyleClass().addAll("ball", ball.getColor().name().toLowerCase());
-
-            return circle;
-        }
-
-        /**
-         * Ottiene il colore JavaFX per una pallina
-         */
-        private javafx.scene.paint.Paint getBallColor(Ball.Color ballColor) {
-            javafx.scene.paint.Color centerColor, edgeColor;
-
-            switch (ballColor) {
-                case RED -> {
-                    centerColor = javafx.scene.paint.Color.web("#FF6B6B");
-                    edgeColor = javafx.scene.paint.Color.web("#E53E3E");
-                }
-                case BLUE -> {
-                    centerColor = javafx.scene.paint.Color.web("#4DABF7");
-                    edgeColor = javafx.scene.paint.Color.web("#2B77E5");
-                }
-                case GREEN -> {
-                    centerColor = javafx.scene.paint.Color.web("#51CF66");
-                    edgeColor = javafx.scene.paint.Color.web("#37B24D");
-                }
-                case YELLOW -> {
-                    centerColor = javafx.scene.paint.Color.web("#FFD43B");
-                    edgeColor = javafx.scene.paint.Color.web("#FAB005");
-                }
-                case ORANGE -> {
-                    centerColor = javafx.scene.paint.Color.web("#FF8A65");
-                    edgeColor = javafx.scene.paint.Color.web("#FF7043");
-                }
-                case PURPLE -> {
-                    centerColor = javafx.scene.paint.Color.web("#9C88FF");
-                    edgeColor = javafx.scene.paint.Color.web("#7C3AED");
-                }
-                case PINK -> {
-                    centerColor = javafx.scene.paint.Color.web("#FFB3D9");
-                    edgeColor = javafx.scene.paint.Color.web("#FF8CC8");
-                }
-                default -> {
-                    centerColor = javafx.scene.paint.Color.GRAY;
-                    edgeColor = javafx.scene.paint.Color.DARKGRAY;
-                }
-            }
-
-            return new javafx.scene.paint.RadialGradient(
-                    0, 0, 0.3, 0.3, 0.7, true,
-                    javafx.scene.paint.CycleMethod.NO_CYCLE,
-                    new javafx.scene.paint.Stop(0, centerColor),
-                    new javafx.scene.paint.Stop(1, edgeColor)
-            );
-        }
-
-        // Metodi di utilità
-
-        public Circle getTopBall() {
-            return balls.isEmpty() ? null : balls.get(balls.size() - 1);
-        }
-
-        public double getCenterX() {
-            return container.getLayoutX() + TUBE_WIDTH / 2;
-        }
-
-        public double getTopBallY() {
-            if (balls.isEmpty()) return container.getLayoutY() + tubeHeight - BALL_SIZE;
-            return container.getLayoutY() + container.getHeight() - (balls.size() * (BALL_SIZE * 2 + 5));
-        }
-
-        public double getNextBallY() {
-            return container.getLayoutY() + container.getHeight() - ((balls.size() + 1) * (BALL_SIZE * 2 + 5));
-        }
-
-        public void setSelected(boolean selected) {
-            if (selected) {
-                container.getStyleClass().add("selected");
-            } else {
-                container.getStyleClass().remove("selected");
-            }
-        }
-
-        public void setHintSource(boolean isSource) {
-            if (isSource) {
-                container.getStyleClass().add("hint-source");
-            } else {
-                container.getStyleClass().remove("hint-source");
-            }
-        }
-
-        public void setHintTarget(boolean isTarget) {
-            if (isTarget) {
-                container.getStyleClass().add("hint-target");
-            } else {
-                container.getStyleClass().remove("hint-target");
-            }
-        }
-
-        public void reset() {
-            container.getChildren().clear();
-            balls.clear();
-            container.getStyleClass().removeAll("selected", "hint-source", "hint-target");
-        }
-
-        // Getters
-
-        public int getTubeId() {
-            return tubeId;
-        }
-
-        public VBox getContainer() {
-            return container;
-        }
-
-        public void setOnClick(Runnable onClick) {
-            this.onClick = onClick;
-        }
+    public void setOnMoveRequested(GameEventHandler.MoveHandler handler) {
+        this.onMoveRequested = handler;
     }
 }

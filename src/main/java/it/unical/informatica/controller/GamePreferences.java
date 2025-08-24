@@ -1,6 +1,7 @@
 package it.unical.informatica.controller;
 
 import it.unical.informatica.model.GameLevel;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.prefs.Preferences;

@@ -11,15 +11,15 @@ module bubbleSorting {
     requires java.net.http;
     requires java.prefs;
     requires jdk.jfr;
+    requires org.json;
 
     // Esportazioni “normali”
     exports it.unical.informatica;
     exports it.unical.informatica.controller;
     exports it.unical.informatica.model;
     exports it.unical.informatica.view;
+    exports it.unical.informatica.asp to org.antlr.antlr4.runtime;
 
-    // Se esporti classi di test (non necessario in genere)
-    exports it.unical.informatica.test;
 
     // Aperture per riflessione (FXML; EmbASP usa riflessione -> apri senza target)
     opens it.unical.informatica to javafx.fxml;
