@@ -1,7 +1,5 @@
 package it.unical.informatica.model;
 
-import it.unical.informatica.asp.EmbAspLevelChecker;
-
 import java.util.*;
 import java.util.stream.Collectors;
 

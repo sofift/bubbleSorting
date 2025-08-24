@@ -17,7 +17,6 @@ module bubbleSorting {
     exports it.unical.informatica.controller;
     exports it.unical.informatica.model;
     exports it.unical.informatica.view;
-    exports it.unical.informatica.asp;
 
     // Se esporti classi di test (non necessario in genere)
     exports it.unical.informatica.test;

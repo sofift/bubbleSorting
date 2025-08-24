@@ -1,6 +1,5 @@
 package it.unical.informatica.controller;
 
-import it.unical.informatica.asp.AspSolver;
 import it.unical.informatica.model.GameLevel;
 import it.unical.informatica.model.GameState;
 import it.unical.informatica.view.GameView;
