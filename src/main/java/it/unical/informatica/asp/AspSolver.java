@@ -90,26 +90,26 @@ public class AspSolver {
 
         try {
             // 1) Prepara InputProgram
-            InputProgram input = new ASPInputProgram();
-            System.out.println("📁 Caricamento file: " + ASP_RULES_FILE);
-            input.addFilesPath(ASP_RULES_FILE);
-            System.out.println("✅ File ASP aggiunto");
+            InputProgram facts = new ASPInputProgram();
+            addGameFacts(facts, gameState, horizon);
+            handler.addProgram(facts);
 
-            System.out.println("🔧 Generazione fatti di gioco...");
-            addGameFacts(input, gameState, horizon);
-            System.out.println("✅ Fatti del gioco aggiunti");
+
+            InputProgram rules = new ASPInputProgram();
+
+            System.out.println("📁 Caricamento file: " + ASP_RULES_FILE);
+            rules.addFilesPath(ASP_RULES_FILE);
+
+
 
             // (facoltativo) limita l’output alle sole mosse
             try { handler.addOption(new OptionDescriptor("--filter=show_move")); } catch (Throwable ignore) {}
 
             // 2) Esegui
-            handler.addProgram(input);
-            System.out.println("⚙️ Esecuzione DLV2...");
-            Output output = handler.startSync();
-            System.out.println("✅ DLV2 completato");
+            handler.addProgram(rules);
 
-            // 3) Parsifica risultati in un unico punto
-            System.out.println("📊 Processamento risultati...");
+            Output output = handler.startSync();
+
             List<ShowMove> result = processResults(output);
 
             if (result.isEmpty()) System.out.println("❌ Nessuna soluzione trovata");
@@ -121,6 +121,7 @@ public class AspSolver {
             throw new ASPSolverException("Errore nella risoluzione: " + e.getMessage(), e);
         }
     }
+
 
 
     /**
@@ -138,36 +139,36 @@ public class AspSolver {
     /**
      * Aggiunge i fatti del gioco all'InputProgram
      */
-    void addGameFacts(InputProgram program, GameState gameState, int horizon) throws Exception {
+    void addGameFacts(InputProgram facts, GameState gameState, int horizon) throws Exception {
         System.out.println("🔧 Inizio generazione fatti ASP...");
 
         // 1) capacity(4).
         int capacity = gameState.getLevel().getTubeCapacity(); // dovrebbe essere 4
-        program.addObjectInput(new CapacityFact(capacity));
+        facts.addObjectInput(new CapacityFact(capacity));
         System.out.println("   capacity(" + capacity + ").");
 
         // 2) tube(1). tube(2). ... (espliciti)
         int numTubes = gameState.getTubes().size();
         for (int t = 1; t <= numTubes; t++) {
-            program.addObjectInput(new TubeFact(t));
+            facts.addObjectInput(new TubeFact(t));
             System.out.println("   tube(" + t + ").");
         }
 
         // 3) pos(0). pos(1). pos(2). pos(3).  (espliciti)
         for (int p = 0; p < capacity; p++) {
-            program.addObjectInput(new PosFact(p));
+            facts.addObjectInput(new PosFact(p));
         }
         System.out.println("   pos(0.."+(capacity-1)+") espansi.");
 
         // 4) step(0). step(1). ... step(horizon).  (espliciti)
         for (int s = 0; s <= horizon; s++) {
-            program.addObjectInput(new StepFact(s));
+            facts.addObjectInput(new StepFact(s));
         }
         System.out.println("   step(0.."+horizon+") espansi.");
 
         // (facoltativi: se vuoi tenerli per logging/telemetria)
-        program.addObjectInput(new NumTubesFact(numTubes));
-        program.addObjectInput(new HorizonFact(horizon));
+        facts.addObjectInput(new NumTubesFact(numTubes));
+        facts.addObjectInput(new HorizonFact(horizon));
 
         // 5) init_ball(T,P,C): ATTENZIONE a indici e colori
         int totalBalls = 0;
@@ -181,7 +182,7 @@ public class AspSolver {
                 Ball b = balls.get(p);
                 if (b == null || b.getColor() == null) continue; // salta spazi vuoti
                 String color = b.getColor().name().toLowerCase(); // RED -> "red"
-                program.addObjectInput(new BallFact(tIndex + 1, p, color));
+                facts.addObjectInput(new BallFact(tIndex + 1, p, color));
                 totalBalls++;
             }
         }
