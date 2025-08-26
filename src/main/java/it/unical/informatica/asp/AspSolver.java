@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 public class AspSolver {
     private static final String DLV2_PATH = "libs/dlv-2.1.2-win64.exe";
     private static final String ASP_RULES_FILE = "src/main/resources/asp/rules.asp";
-    private static final int DEFAULT_HORIZON = 15;
+    private static final int DEFAULT_HORIZON = 40;
 
     private Handler handler;
     private boolean initialized = false;
@@ -47,6 +47,10 @@ public class AspSolver {
             ASPMapper.getInstance().registerClass(CapacityFact.class);
             ASPMapper.getInstance().registerClass(NumTubesFact.class);
             ASPMapper.getInstance().registerClass(HorizonFact.class);
+            ASPMapper.getInstance().registerClass(PosFact.class);
+            ASPMapper.getInstance().registerClass(StepFact.class);
+            ASPMapper.getInstance().registerClass(ShowMove.class);
+
 
             initialized = true;
             System.out.println("ASP Solver inizializzato correttamente");
@@ -84,59 +88,44 @@ public class AspSolver {
      * Risolve il puzzle con un orizzonte temporale specifico
      */
     public List<Move> solve(GameState gameState, int horizon) throws ASPSolverException {
-        if (!initialized) {
-            throw new ASPSolverException("Solver non inizializzato");
-        }
+        if (!initialized) throw new ASPSolverException("Solver non inizializzato");
+        System.out.println("🤖 Avvio risoluzione ASP...");
+
 
         try {
-            System.out.println("🤖 Avvio risoluzione ASP...");
-
-            // Crea l'InputProgram
-            InputProgram inputProgram = new ASPInputProgram();
-
-            // ✅ AGGIUNGE DEBUG: Verifica che il file esista
+            // 1) Prepara InputProgram
+            InputProgram input = new ASPInputProgram();
             System.out.println("📁 Caricamento file: " + ASP_RULES_FILE);
-
-            // Aggiunge il file delle regole ASP
-            inputProgram.addFilesPath(ASP_RULES_FILE);
+            input.addFilesPath(ASP_RULES_FILE);
             System.out.println("✅ File ASP aggiunto");
 
-            // ✅ AGGIUNGE DEBUG: Stampa i fatti che verranno aggiunti
             System.out.println("🔧 Generazione fatti di gioco...");
-
-            // Aggiunge i fatti del gioco
-            addGameFacts(inputProgram, gameState, horizon);
+            addGameFacts(input, gameState, horizon);
             System.out.println("✅ Fatti del gioco aggiunti");
 
-            // ✅ AGGIUNGE DEBUG: Mostra stato InputProgram
-            System.out.println("📋 InputProgram pronto, avvio DLV2...");
+            // (facoltativo) limita l’output alle sole mosse
+            try { handler.addOption(new OptionDescriptor("--filter=show_move")); } catch (Throwable ignore) {}
 
-            // Aggiunge il programma all'handler
-            handler.addProgram(inputProgram);
-
-            // Esegue il solver
+            // 2) Esegui
+            handler.addProgram(input);
             System.out.println("⚙️ Esecuzione DLV2...");
             Output output = handler.startSync();
             System.out.println("✅ DLV2 completato");
 
-            // Processa i risultati
+            // 3) Parsifica risultati in un unico punto
             System.out.println("📊 Processamento risultati...");
             List<Move> result = processResults(output);
 
-            if (result.isEmpty()) {
-                System.out.println("❌ Nessuna soluzione trovata");
-            } else {
-                System.out.println("✅ Trovate " + result.size() + " mosse");
-            }
-
+            if (result.isEmpty()) System.out.println("❌ Nessuna soluzione trovata");
+            else System.out.println("✅ Trovate " + result.size() + " mosse");
             return result;
 
         } catch (Exception e) {
             System.err.println("❌ ERRORE nella risoluzione ASP: " + e.getMessage());
-            e.printStackTrace();
             throw new ASPSolverException("Errore nella risoluzione: " + e.getMessage(), e);
         }
     }
+
 
     /**
      * Verifica se il puzzle è risolvibile
@@ -153,112 +142,94 @@ public class AspSolver {
     /**
      * Aggiunge i fatti del gioco all'InputProgram
      */
-    private void addGameFacts(InputProgram program, GameState gameState, int horizon) throws Exception {
+    void addGameFacts(InputProgram program, GameState gameState, int horizon) throws Exception {
         System.out.println("🔧 Inizio generazione fatti ASP...");
 
-        // Numero di tubi
-        NumTubesFact numTubesFact = new NumTubesFact(gameState.getTubes().size());
-        program.addObjectInput(numTubesFact);
-        System.out.println("   " + numTubesFact);
+        // 1) capacity(4).
+        int capacity = gameState.getLevel().getTubeCapacity(); // dovrebbe essere 4
+        program.addObjectInput(new CapacityFact(capacity));
+        System.out.println("   capacity(" + capacity + ").");
 
-        // Capacità dei tubi
-        CapacityFact capacityFact = new CapacityFact(gameState.getLevel().getTubeCapacity());
-        program.addObjectInput(capacityFact);
-        System.out.println("   " + capacityFact);
-
-        // Orizzonte temporale
-        HorizonFact horizonFact = new HorizonFact(horizon);
-        program.addObjectInput(horizonFact);
-        System.out.println("   " + horizonFact);
-
-        // Fatti sui tubi e palline
-        List<Tube> tubes = gameState.getTubes();
-        int totalFacts = 0;
-
-        for (int tubeIndex = 0; tubeIndex < tubes.size(); tubeIndex++) {
-            Tube tube = tubes.get(tubeIndex);
-
-            // Tubo (numerazione da 1 per ASP)
-            TubeFact tubeFact = new TubeFact(tubeIndex + 1);
-            program.addObjectInput(tubeFact);
-            System.out.println("   " + tubeFact);
-            totalFacts++;
-
-            // Palline nel tubo
-            List<Ball> balls = tube.getBalls();
-            System.out.println("   Tubo " + (tubeIndex + 1) + " ha " + balls.size() + " palline:");
-
-            for (int position = 0; position < balls.size(); position++) {
-                Ball ball = balls.get(position);
-                BallFact ballFact = new BallFact(
-                        tubeIndex + 1, // tubo (1-indexed)
-                        position,      // posizione (0-indexed)
-                        ball.getColor().name().toLowerCase()
-                );
-                program.addObjectInput(ballFact);
-                System.out.println("     " + ballFact);
-                totalFacts++;
-            }
+        // 2) tube(1). tube(2). ... (espliciti)
+        int numTubes = gameState.getTubes().size();
+        for (int t = 1; t <= numTubes; t++) {
+            program.addObjectInput(new TubeFact(t));
+            System.out.println("   tube(" + t + ").");
         }
 
-        System.out.println("✅ Aggiunti " + totalFacts + " fatti ASP totali");
+        // 3) pos(0). pos(1). pos(2). pos(3).  (espliciti)
+        for (int p = 0; p < capacity; p++) {
+            program.addObjectInput(new PosFact(p));
+        }
+        System.out.println("   pos(0.."+(capacity-1)+") espansi.");
+
+        // 4) step(0). step(1). ... step(horizon).  (espliciti)
+        for (int s = 0; s <= horizon; s++) {
+            program.addObjectInput(new StepFact(s));
+        }
+        System.out.println("   step(0.."+horizon+") espansi.");
+
+        // (facoltativi: se vuoi tenerli per logging/telemetria)
+        program.addObjectInput(new NumTubesFact(numTubes));
+        program.addObjectInput(new HorizonFact(horizon));
+
+        // 5) init_ball(T,P,C): ATTENZIONE a indici e colori
+        int totalBalls = 0;
+        for (int tIndex = 0; tIndex < numTubes; tIndex++) {
+            Tube tube = gameState.getTubes().get(tIndex);
+            List<Ball> balls = tube.getBalls();
+
+            // Assunzione: P=0 è il fondo e cresce verso la cima (coerente col debug).
+            // Se nel tuo modello l’array è "cima→fondo", usa: int pos = capacity - 1 - p;
+            for (int p = 0; p < balls.size(); p++) {
+                Ball b = balls.get(p);
+                if (b == null || b.getColor() == null) continue; // salta spazi vuoti
+                String color = b.getColor().name().toLowerCase(); // RED -> "red"
+                program.addObjectInput(new BallFact(tIndex + 1, p, color));
+                totalBalls++;
+            }
+        }
+        System.out.println("   init_ball totali: " + totalBalls);
     }
+
 
     /**
      * Processa i risultati del solver ASP
      */
-    private List<Move> processResults(Output output) throws Exception {
+    private List<Move> processResults(Output output) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
         List<Move> moves = new ArrayList<>();
+        if (!(output instanceof AnswerSets)) return moves;
 
-        System.out.println("📊 Tipo di output: " + output.getClass().getName());
+        AnswerSets as = (AnswerSets) output;
 
-        if (!(output instanceof AnswerSets)) {
-            System.out.println("❌ Output non è AnswerSets");
-            return moves;
+        // Se presente, preferisci i set ottimali (vincoli deboli)
+        List<AnswerSet> models;
+        try {
+            models = as.getOptimalAnswerSets();  // EmbASP 7.x spesso ce l’ha
+            if (models == null || models.isEmpty()) models = as.getAnswersets();
+        } catch (Throwable t) {
+            models = as.getAnswersets();
         }
 
-        AnswerSets answerSets = (AnswerSets) output;
-        System.out.println("📋 Numero di AnswerSets: " + answerSets.getAnswersets().size());
+        if (models.isEmpty()) return moves;
 
-        if (answerSets.getAnswersets().isEmpty()) {
-            System.out.println("📋 Nessun AnswerSet trovato - puzzle non risolvibile");
-            return moves;
-        }
+        // Prendi il primo (ottimale)
+        AnswerSet best = models.get(0);
 
-        // Prende il primo answer set (soluzione ottimale)
-        AnswerSet bestAnswerSet = answerSets.getAnswersets().get(0);
-        System.out.println("🔍 Atomi nell'AnswerSet: " + bestAnswerSet.getAtoms().size());
-
-        // ✅ STAMPA TUTTI GLI ATOMI per debug
-        System.out.println("🔍 Atomi trovati:");
-        for (Object atom : bestAnswerSet.getAtoms()) {
-            System.out.println("   " + atom + " (tipo: " + atom.getClass().getName() + ")");
-        }
-
-        // Mappa per ordinare le mosse per step
-        Map<Integer, Move> stepMoves = new TreeMap<>();
-
-        // Estrae le mosse dal set di atomi
-        int movesFound = 0;
-        for (Object atom : bestAnswerSet.getAtoms()) {
-            if (atom instanceof MoveFact) {
-                MoveFact moveFact = (MoveFact) atom;
-                Move move = new Move(
-                        moveFact.getFromTube() - 1, // Converti da 1-indexed a 0-indexed
-                        moveFact.getToTube() - 1,   // Converti da 1-indexed a 0-indexed
-                        null // Ball sarà determinato durante l'esecuzione
-                );
-                stepMoves.put(moveFact.getStep(), move);
-                System.out.println("   ✅ Mossa trovata: " + moveFact);
-                movesFound++;
+        // Estrai show_move(F,T,S) mappato su ShowMove (ricorda: registra la classe!)
+        Map<Integer, Move> byStep = new TreeMap<>();
+        for (Object atom : best.getAtoms()) {
+            if (atom instanceof ShowMove) {
+                ShowMove sm = (ShowMove) atom;
+                // se in ASP i tubi sono 1-based, qui converti a 0-based per il tuo engine
+                Move m = new Move(sm.getFrom() - 1, sm.getTo() - 1, null);
+                byStep.put(sm.getStep(), m);
             }
         }
-
-        System.out.println("📊 Mosse totali estratte: " + movesFound);
-
-        moves.addAll(stepMoves.values());
+        moves.addAll(byStep.values());
         return moves;
     }
+
 
 
     /**
@@ -434,6 +405,41 @@ public class AspSolver {
             return String.format("horizon(%d)", horizon);
         }
     }
+
+    @Id("pos")
+    public static class PosFact {
+        @Param(0) private int p;
+        public PosFact() {}
+        public PosFact(int p) { this.p = p; }
+        public int getP() { return p; }
+        public void setP(int p) { this.p = p; }
+        @Override public String toString(){ return "pos(" + p + ")"; }
+    }
+
+    @Id("step")
+    public static class StepFact {
+        @Param(0) private int s;
+        public StepFact() {}
+        public StepFact(int s) { this.s = s; }
+        public int getS() { return s; }
+        public void setS(int s) { this.s = s; }
+        @Override public String toString(){ return "step(" + s + ")"; }
+    }
+
+    @Id("show_move")
+    public class ShowMove {
+        @Param(1) private int from;
+        @Param(2) private int to;
+        @Param(3) private int step;
+
+        public ShowMove() {}
+        public ShowMove(int from, int to, int step) { this.from=from; this.to=to; this.step=step; }
+
+        public int getFrom(){ return from; }
+        public int getTo(){ return to; }
+        public int getStep(){ return step; }
+    }
+
 
     /**
      * Eccezione per errori del solver ASP
