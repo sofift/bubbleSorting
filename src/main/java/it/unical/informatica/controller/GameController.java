@@ -394,7 +394,8 @@ public class GameController {
     }
 
     /**
-     * Risolve automaticamente il puzzle usando ASP
+     * Ri
+     *automaticamente il puzzle usando ASP
      */
     private void solveAutomatically() {
         if (isProcessingMove || gameState.isGameWon()) {
