@@ -1,6 +1,6 @@
 package it.unical.informatica.model;
 
-import it.unical.informatica.asp.AspSolver;
+import it.unical.informatica.asp.*;
 import it.unical.mat.embasp.base.InputProgram;
 
 import java.util.*;
@@ -340,13 +340,13 @@ public class GameState {
      */
     private void addGameFactsToProgram(InputProgram program, GameState gameState, int horizon) throws Exception {
         // Numero di tubi
-        program.addObjectInput(new AspSolver.NumTubesFact(gameState.getTubes().size()));
+        program.addObjectInput(new NumTubesFact(gameState.getTubes().size()));
 
         // Capacità dei tubi
-        program.addObjectInput(new AspSolver.CapacityFact(gameState.getLevel().getTubeCapacity()));
+        program.addObjectInput(new CapacityFact(gameState.getLevel().getTubeCapacity()));
 
         // Orizzonte temporale
-        program.addObjectInput(new AspSolver.HorizonFact(horizon));
+        program.addObjectInput(new HorizonFact(horizon));
 
         // Fatti sui tubi e palline
         List<Tube> tubes = gameState.getTubes();
@@ -354,13 +354,13 @@ public class GameState {
             Tube tube = tubes.get(tubeIndex);
 
             // Tubo (numerazione da 1 per ASP)
-            program.addObjectInput(new AspSolver.TubeFact(tubeIndex + 1));
+            program.addObjectInput(new TubeFact(tubeIndex + 1));
 
             // Palline nel tubo
             List<Ball> balls = tube.getBalls();
             for (int position = 0; position < balls.size(); position++) {
                 Ball ball = balls.get(position);
-                program.addObjectInput(new AspSolver.BallFact(
+                program.addObjectInput(new BallFact(
                         tubeIndex + 1, // tubo (1-indexed)
                         position,      // posizione (0-indexed)
                         ball.getColor().name().toLowerCase()

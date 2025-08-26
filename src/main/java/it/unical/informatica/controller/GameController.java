@@ -1,6 +1,7 @@
 package it.unical.informatica.controller;
 
 import it.unical.informatica.asp.AspSolver;
+import it.unical.informatica.asp.ShowMove;
 import it.unical.informatica.model.*;
 import it.unical.informatica.view.GameView;
 import javafx.application.Platform;
@@ -485,14 +486,15 @@ public class GameController {
     /**
      * Servizio per calcolare suggerimenti in background
      */
-    private class HintService extends Service<Move> {
+    private class HintService extends Service<ShowMove> {
         @Override
-        protected Task<Move> createTask() {
-            return new Task<Move>() {
+        protected Task<ShowMove> createTask() {
+            return new Task<ShowMove>() {
                 @Override
-                protected Move call() throws Exception {
+                protected ShowMove call() throws Exception {
                     // ✅ CORREZIONE: Usa il metodo corretto
-                    return aspSolver.getHint(gameState);
+                    //return aspSolver.getHint(gameState);
+                    return null;
                 }
             };
         }
@@ -501,12 +503,12 @@ public class GameController {
     /**
      * Servizio per la risoluzione automatica in background
      */
-    private class SolveService extends Service<List<Move>> {
+    private class SolveService extends Service<List<ShowMove>> {
         @Override
-        protected Task<List<Move>> createTask() {
-            return new Task<List<Move>>() {
+        protected Task<List<ShowMove>> createTask() {
+            return new Task<List<ShowMove>>() {
                 @Override
-                protected List<Move> call() throws Exception {
+                protected List<ShowMove> call() throws Exception {
                     // ✅ CORREZIONE: Usa il metodo corretto
                     return aspSolver.solve(gameState);
                 }
@@ -562,7 +564,7 @@ public class GameController {
             }
 
             if (aspSolver != null) {
-                aspSolver.cleanup();
+                //aspSolver.cleanup();
             }
 
             System.out.println("✅ Risorse pulite");

@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 public class AspSolver {
     private static final String DLV2_PATH = "libs/dlv-2.1.2-win64.exe";
     private static final String ASP_RULES_FILE = "src/main/resources/asp/rules.asp";
-    private static final int DEFAULT_HORIZON = 40;
+    private static final int horizon = 40;
 
     private Handler handler;
     private boolean initialized = false;
@@ -42,14 +42,13 @@ public class AspSolver {
 
             // Registra le classi per il mapping ASP
             ASPMapper.getInstance().registerClass(BallFact.class);
-            ASPMapper.getInstance().registerClass(MoveFact.class);
+            ASPMapper.getInstance().registerClass(ShowMove.class);
             ASPMapper.getInstance().registerClass(TubeFact.class);
             ASPMapper.getInstance().registerClass(CapacityFact.class);
             ASPMapper.getInstance().registerClass(NumTubesFact.class);
             ASPMapper.getInstance().registerClass(HorizonFact.class);
             ASPMapper.getInstance().registerClass(PosFact.class);
             ASPMapper.getInstance().registerClass(StepFact.class);
-            ASPMapper.getInstance().registerClass(ShowMove.class);
 
 
             initialized = true;
@@ -63,13 +62,13 @@ public class AspSolver {
     /**
      * Ottiene un suggerimento (prossima mossa migliore)
      */
-    public Move getHint(GameState gameState) throws ASPSolverException {
+    public ShowMove getHint(GameState gameState) throws ASPSolverException {
         if (!initialized) {
             throw new ASPSolverException("Solver non inizializzato");
         }
 
         try {
-            List<Move> solution = solve(gameState, 3); // Orizzonte breve per suggerimenti rapidi
+            List<ShowMove> solution = solve(gameState); // Orizzonte breve per suggerimenti rapidi
             return solution.isEmpty() ? null : solution.get(0);
 
         } catch (Exception e) {
@@ -80,14 +79,11 @@ public class AspSolver {
     /**
      * Risolve completamente il puzzle
      */
-    public List<Move> solve(GameState gameState) throws ASPSolverException {
-        return solve(gameState, DEFAULT_HORIZON);
-    }
 
     /**
      * Risolve il puzzle con un orizzonte temporale specifico
      */
-    public List<Move> solve(GameState gameState, int horizon) throws ASPSolverException {
+    public List<ShowMove> solve(GameState gameState) throws ASPSolverException {
         if (!initialized) throw new ASPSolverException("Solver non inizializzato");
         System.out.println("🤖 Avvio risoluzione ASP...");
 
@@ -114,7 +110,7 @@ public class AspSolver {
 
             // 3) Parsifica risultati in un unico punto
             System.out.println("📊 Processamento risultati...");
-            List<Move> result = processResults(output);
+            List<ShowMove> result = processResults(output);
 
             if (result.isEmpty()) System.out.println("❌ Nessuna soluzione trovata");
             else System.out.println("✅ Trovate " + result.size() + " mosse");
@@ -132,7 +128,7 @@ public class AspSolver {
      */
     public boolean isSolvable(GameState gameState) throws ASPSolverException {
         try {
-            List<Move> solution = solve(gameState, 5); // Test rapido con orizzonte breve
+            List<ShowMove> solution = solve(gameState); // Test rapido con orizzonte breve
             return !solution.isEmpty();
         } catch (Exception e) {
             return false; // Se c'è un errore, assumiamo non risolvibile
@@ -196,8 +192,8 @@ public class AspSolver {
     /**
      * Processa i risultati del solver ASP
      */
-    private List<Move> processResults(Output output) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
-        List<Move> moves = new ArrayList<>();
+    private List<ShowMove> processResults(Output output) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
+        List<ShowMove> moves = new ArrayList<>();
         if (!(output instanceof AnswerSets)) return moves;
 
         AnswerSets as = (AnswerSets) output;
@@ -217,12 +213,12 @@ public class AspSolver {
         AnswerSet best = models.get(0);
 
         // Estrai show_move(F,T,S) mappato su ShowMove (ricorda: registra la classe!)
-        Map<Integer, Move> byStep = new TreeMap<>();
+        Map<Integer, ShowMove> byStep = new TreeMap<>();
         for (Object atom : best.getAtoms()) {
             if (atom instanceof ShowMove) {
                 ShowMove sm = (ShowMove) atom;
                 // se in ASP i tubi sono 1-based, qui converti a 0-based per il tuo engine
-                Move m = new Move(sm.getFrom() - 1, sm.getTo() - 1, null);
+                ShowMove m = new ShowMove(sm.getFrom() - 1, sm.getTo() - 1, sm.getStep());
                 byStep.put(sm.getStep(), m);
             }
         }
@@ -243,202 +239,7 @@ public class AspSolver {
         initialized = false;
     }
 
-    // ===============================
-    // CLASSI PER IL MAPPING ASP
-    // ===============================
 
-    /**
-     * Rappresenta init_ball(T, P, C)
-     */
-    @Id("init_ball")
-    public static class BallFact {
-        @Param(0)
-        private int tube;
-        @Param(1)
-        private int position;
-        @Param(2)
-        private String color;
-
-        public BallFact() {}
-
-        public BallFact(int tube, int position, String color) {
-            this.tube = tube;
-            this.position = position;
-            this.color = color;
-        }
-
-        // Getters e setters necessari per EmbASP
-        public int getTube() { return tube; }
-        public void setTube(int tube) { this.tube = tube; }
-        public int getPosition() { return position; }
-        public void setPosition(int position) { this.position = position; }
-        public String getColor() { return color; }
-        public void setColor(String color) { this.color = color; }
-
-        @Override
-        public String toString() {
-            return String.format("init_ball(%d,%d,%s)", tube, position, color);
-        }
-    }
-
-    /**
-     * Rappresenta move(F, T, S)
-     */
-    @Id("move")
-    public static class MoveFact {
-        @Param(0)
-        private int fromTube;
-        @Param(1)
-        private int toTube;
-        @Param(2)
-        private int step;
-
-        public MoveFact() {}
-
-        public MoveFact(int fromTube, int toTube, int step) {
-            this.fromTube = fromTube;
-            this.toTube = toTube;
-            this.step = step;
-        }
-
-        public int getFromTube() { return fromTube; }
-        public void setFromTube(int fromTube) { this.fromTube = fromTube; }
-        public int getToTube() { return toTube; }
-        public void setToTube(int toTube) { this.toTube = toTube; }
-        public int getStep() { return step; }
-        public void setStep(int step) { this.step = step; }
-
-        @Override
-        public String toString() {
-            return String.format("move(%d,%d,%d)", fromTube, toTube, step);
-        }
-    }
-
-    /**
-     * Rappresenta tube(T)
-     */
-    @Id("tube")
-    public static class TubeFact {
-        @Param(0)
-        private int tube;
-
-        public TubeFact() {}
-
-        public TubeFact(int tube) {
-            this.tube = tube;
-        }
-
-        public int getTube() { return tube; }
-        public void setTube(int tube) { this.tube = tube; }
-
-        @Override
-        public String toString() {
-            return String.format("tube(%d)", tube);
-        }
-    }
-
-    /**
-     * Rappresenta capacity(C)
-     */
-    @Id("capacity")
-    public static class CapacityFact {
-        @Param(0)
-        private int capacity;
-
-        public CapacityFact() {}
-
-        public CapacityFact(int capacity) {
-            this.capacity = capacity;
-        }
-
-        public int getCapacity() { return capacity; }
-        public void setCapacity(int capacity) { this.capacity = capacity; }
-
-        @Override
-        public String toString() {
-            return String.format("capacity(%d)", capacity);
-        }
-    }
-
-    /**
-     * Rappresenta num_tubes(N)
-     */
-    @Id("num_tubes")
-    public static class NumTubesFact {
-        @Param(0)
-        private int numTubes;
-
-        public NumTubesFact() {}
-
-        public NumTubesFact(int numTubes) {
-            this.numTubes = numTubes;
-        }
-
-        public int getNumTubes() { return numTubes; }
-        public void setNumTubes(int numTubes) { this.numTubes = numTubes; }
-
-        @Override
-        public String toString() {
-            return String.format("num_tubes(%d)", numTubes);
-        }
-    }
-
-    /**
-     * Rappresenta horizon(H)
-     */
-    @Id("horizon")
-    public static class HorizonFact {
-        @Param(0)
-        private int horizon;
-
-        public HorizonFact() {}
-
-        public HorizonFact(int horizon) {
-            this.horizon = horizon;
-        }
-
-        public int getHorizon() { return horizon; }
-        public void setHorizon(int horizon) { this.horizon = horizon; }
-
-        @Override
-        public String toString() {
-            return String.format("horizon(%d)", horizon);
-        }
-    }
-
-    @Id("pos")
-    public static class PosFact {
-        @Param(0) private int p;
-        public PosFact() {}
-        public PosFact(int p) { this.p = p; }
-        public int getP() { return p; }
-        public void setP(int p) { this.p = p; }
-        @Override public String toString(){ return "pos(" + p + ")"; }
-    }
-
-    @Id("step")
-    public static class StepFact {
-        @Param(0) private int s;
-        public StepFact() {}
-        public StepFact(int s) { this.s = s; }
-        public int getS() { return s; }
-        public void setS(int s) { this.s = s; }
-        @Override public String toString(){ return "step(" + s + ")"; }
-    }
-
-    @Id("show_move")
-    public class ShowMove {
-        @Param(1) private int from;
-        @Param(2) private int to;
-        @Param(3) private int step;
-
-        public ShowMove() {}
-        public ShowMove(int from, int to, int step) { this.from=from; this.to=to; this.step=step; }
-
-        public int getFrom(){ return from; }
-        public int getTo(){ return to; }
-        public int getStep(){ return step; }
-    }
 
 
     /**
