@@ -334,42 +334,7 @@ public class GameState {
         loadLevelFromJSON(); // ✅ Ricarica sempre dal JSON
     }
 
-    /**
-     * ✅ METODO CORRETTO per addGameFacts in AspSolver
-     * Aggiunge i fatti del gioco all'InputProgram
-     */
-    private void addGameFactsToProgram(InputProgram program, GameState gameState, int horizon) throws Exception {
-        // Numero di tubi
-        program.addObjectInput(new NumTubesFact(gameState.getTubes().size()));
 
-        // Capacità dei tubi
-        program.addObjectInput(new CapacityFact(gameState.getLevel().getTubeCapacity()));
-
-        // Orizzonte temporale
-        program.addObjectInput(new HorizonFact(horizon));
-
-        // Fatti sui tubi e palline
-        List<Tube> tubes = gameState.getTubes();
-        for (int tubeIndex = 0; tubeIndex < tubes.size(); tubeIndex++) {
-            Tube tube = tubes.get(tubeIndex);
-
-            // Tubo (numerazione da 1 per ASP)
-            program.addObjectInput(new TubeFact(tubeIndex + 1));
-
-            // Palline nel tubo
-            List<Ball> balls = tube.getBalls();
-            for (int position = 0; position < balls.size(); position++) {
-                Ball ball = balls.get(position);
-                program.addObjectInput(new BallFact(
-                        tubeIndex + 1, // tubo (1-indexed)
-                        position,      // posizione (0-indexed)
-                        ball.getColor().name().toLowerCase()
-                ));
-            }
-        }
-
-        System.out.println("✅ Fatti ASP aggiunti al programma via EmbASP");
-    }
 
     // Getters
     public GameLevel getLevel() { return level; }
