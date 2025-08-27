@@ -1,6 +1,6 @@
 % =========================
-%  RULES (planner ASP) - NO { } AND NO #AGGREGATES
-%  Compatible with DLV2 syntax constraints reported by user
+%  RULES (planner ASP) - OTTIMIZZATO con aggregati e choice rules
+%  Mantenendo la logica originale
 % =========================
 
 % --- Successor on positions (capacity 4 assumed: 0..3) ---
@@ -30,7 +30,9 @@ active(S1) :- move(_,_,S), next(S,S1).
 has_ball(T,S) :- ball(T,_,_,S).
 empty(T,S) :- tube(T), step(S), not has_ball(T,S).
 nonempty(T,S) :- has_ball(T,S).
-full(T,S) :- ball(T,0,_,S), ball(T,1,_,S), ball(T,2,_,S), ball(T,3,_,S).
+
+% OTTIMIZZATO: full usando aggregato #count
+full(T,S) :- tube(T), step(S), #count{P : ball(T,P,_,S)} = 4.
 
 % --- Top of tube ---
 higher(T,S,P) :- step(S), tube(T), pos(P), pos(P2), ball(T,P2,_,S), P2 > P.
@@ -47,13 +49,11 @@ canMove(F,T,S) :-
     nonempty(F,S), not full(T,S),
     top_color(F,S,C), top_color(T,S,C).
 
-% --- Guess move WITHOUT {} choice (complementary defaults) ---
-move(F,T,S) :- canMove(F,T,S), not not_move(F,T,S).
-not_move(F,T,S) :- canMove(F,T,S), not move(F,T,S).
+% OTTIMIZZATO: Choice rule per le mosse
+{ move(F,T,S) : canMove(F,T,S) }.
 
-% --- At most one move per step ---
-:- move(F1,T1,S), move(F2,T2,S), F1 != F2.
-:- move(F1,T1,S), move(F2,T2,S), T1 != T2.
+% --- At most one move per step (OTTIMIZZATO con aggregato) ---
+:- step(S), #count{F,T : move(F,T,S)} > 1.
 
 % --- No immediate backtracking ---
 :- move(A,B,S), next(S,S1), move(B,A,S1).
@@ -68,20 +68,18 @@ new_top_pos(T,S,NP) :- move(_,T,S), top_pos(T,S,P), succ(P,NP).
 moved_color(C,F,S) :- move(F,_,S), top_color(F,S,C).
 ball(T,NP,C,S1) :- move(F,T,S), new_top_pos(T,S,NP), moved_color(C,F,S), next(S,S1).
 
-% --- Goal: each tube is monochrome (no aggregates) ---
-% We detect a violation if two different colors appear in the same tube
-% --- Pieno e monocolore (niente aggregati)
-mono_full(T,S) :- ball(T,0,C,S), ball(T,1,C,S), ball(T,2,C,S), ball(T,3,C,S).
+% OTTIMIZZATO: Goal usando aggregati per monochrome check
+% Un tubo è monocolore se ha esattamente un colore diverso
+mono_full(T,S) :- tube(T), step(S),
+    #count{P : ball(T,P,_,S)} = 4,
+    #count{C : ball(T,_,C,S)} = 1.
 
 % --- Buono = vuoto oppure pieno e mono
 good(T,S) :- empty(T,S).
 good(T,S) :- mono_full(T,S).
 
-% --- Tutti i tubi buoni => goal
-not_all_good(S) :- active(S), tube(T), not good(T,S).
-goal(S) :- active(S), not not_all_good(S).
-
-
+% OTTIMIZZATO: Goal usando aggregato per "all good"
+goal(S) :- active(S), #count{T : tube(T), not good(T,S)} = 0.
 
 solved(S) :- goal(S).
 
@@ -96,10 +94,9 @@ exists_goal :- goal(S).
 % --- Optimization: minimize moves; prefer earliest goal ---
 :~ move(F,T,S). [1@1,F,T,S]
 
-earlier_goal(S) :- goal(S1), step(S1), step(S), S1 < S.
-first_goal(S) :- goal(S), not earlier_goal(S).
+% OTTIMIZZATO: First goal usando aggregato #min
+first_goal(S) :- goal(S), #min{S1 : goal(S1)} = S.
 :~ first_goal(S). [S@2,S]
-
 
 % --- Projection ---
 show_move(F,T,S) :- move(F,T,S).
