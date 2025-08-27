@@ -119,17 +119,17 @@
         ]
       }
     ],
-    "HARD": [
+    "HARD":[
       {
         "level": 1,
         "tubes": [
           ["RED", "BLUE", "GREEN", "YELLOW"],
-          ["ORANGE", "PURPLE", "RED", "BLUE"],
+          ["ORANGE", "PURPLE", "PINK", "RED"],
+          ["BLUE", "GREEN", "YELLOW", "ORANGE"],
+          ["PURPLE", "PINK", "RED", "BLUE"],
           ["GREEN", "YELLOW", "ORANGE", "PURPLE"],
-          ["RED", "BLUE", "GREEN", "YELLOW"],
-          ["ORANGE", "PURPLE", "RED", "BLUE"],
-          ["GREEN", "YELLOW", "ORANGE", "PURPLE"],
-          ["PURPLE", "ORANGE", "YELLOW", "GREEN"],
+          ["PINK", "RED", "BLUE", "GREEN"],
+          ["YELLOW", "ORANGE", "PURPLE", "PINK"],
           [],
           []
         ]
@@ -139,11 +139,11 @@
         "tubes": [
           ["PURPLE", "GREEN", "ORANGE", "YELLOW"],
           ["RED", "PURPLE", "GREEN", "ORANGE"],
-          ["YELLOW", "RED", "PURPLE", "GREEN"],
+          ["YELLOW", "PINK", "PURPLE", "GREEN"],
           ["ORANGE", "YELLOW", "RED", "PURPLE"],
-          ["GREEN", "ORANGE", "YELLOW", "RED"],
-          ["PURPLE", "GREEN", "ORANGE", "YELLOW"],
-          ["BLUE", "BLUE", "BLUE", "BLUE"],
+          ["BLUE", "ORANGE", "YELLOW", "RED"],
+          ["PINK", "BLUE", "PINK", "RED"],
+          ["GREEN", "BLUE", "PINK", "BLUE"],
           [],
           []
         ]
@@ -152,12 +152,12 @@
         "level": 3,
         "tubes": [
           ["ORANGE", "YELLOW", "PURPLE", "GREEN"],
-          ["RED", "ORANGE", "YELLOW", "PURPLE"],
-          ["GREEN", "RED", "ORANGE", "YELLOW"],
-          ["PURPLE", "GREEN", "RED", "ORANGE"],
-          ["YELLOW", "PURPLE", "GREEN", "RED"],
-          ["BLUE", "PINK", "BLUE", "PINK"],
-          ["PINK", "BLUE", "PINK", "BLUE"],
+          ["RED", "ORANGE", "BLUE", "PURPLE"],
+          ["PINK", "RED", "ORANGE", "YELLOW"],
+          ["PURPLE", "PINK", "RED", "BLUE"],
+          ["YELLOW", "PURPLE", "PINK", "RED"],
+          ["GREEN", "BLUE", "GREEN", "BLUE"],
+          ["ORANGE", "YELLOW", "GREEN", "PINK"],
           [],
           []
         ]
@@ -166,12 +166,12 @@
         "level": 4,
         "tubes": [
           ["PINK", "BLUE", "GREEN", "YELLOW"],
-          ["ORANGE", "PINK", "BLUE", "GREEN"],
-          ["YELLOW", "ORANGE", "PINK", "BLUE"],
-          ["GREEN", "YELLOW", "ORANGE", "PINK"],
-          ["BLUE", "GREEN", "YELLOW", "ORANGE"],
-          ["PINK", "BLUE", "GREEN", "YELLOW"],
-          ["PURPLE", "RED", "PURPLE", "RED"],
+          ["ORANGE", "PINK", "RED", "GREEN"],
+          ["PURPLE", "ORANGE", "PINK", "BLUE"],
+          ["GREEN", "YELLOW", "ORANGE", "PURPLE"],
+          ["RED", "GREEN", "YELLOW", "ORANGE"],
+          ["PINK", "BLUE", "PURPLE", "YELLOW"],
+          ["RED", "PURPLE", "BLUE", "RED"],
           [],
           []
         ]
@@ -180,12 +180,12 @@
         "level": 5,
         "tubes": [
           ["RED", "PURPLE", "PINK", "ORANGE"],
-          ["YELLOW", "RED", "PURPLE", "PINK"],
-          ["ORANGE", "YELLOW", "RED", "PURPLE"],
-          ["PINK", "ORANGE", "YELLOW", "RED"],
-          ["PURPLE", "PINK", "ORANGE", "YELLOW"],
-          ["GREEN", "BLUE", "GREEN", "BLUE"],
-          ["BLUE", "GREEN", "BLUE", "GREEN"],
+          ["YELLOW", "RED", "BLUE", "PINK"],
+          ["GREEN", "YELLOW", "RED", "PURPLE"],
+          ["PINK", "GREEN", "YELLOW", "RED"],
+          ["PURPLE", "PINK", "ORANGE", "BLUE"],
+          ["GREEN", "BLUE", "GREEN", "ORANGE"],
+          ["BLUE", "ORANGE", "PURPLE", "YELLOW"],
           [],
           []
         ]
