@@ -19,6 +19,7 @@ import java.util.regex.Pattern;
  */
 public class AspSolver {
     private static final String DLV2_PATH = "libs/dlv-2.1.2-win64.exe";
+
     private static final String ASP_RULES_FILE = "src/main/resources/asp/rules.asp";
     private static final int horizon = 40;
 
