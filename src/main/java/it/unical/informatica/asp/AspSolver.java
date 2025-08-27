@@ -20,8 +20,8 @@ import java.util.regex.Pattern;
 public class AspSolver {
     private static final String DLV2_PATH = "libs/dlv-2.1.2-win64.exe";
 
-    private static final String ASP_RULES_FILE = "src/main/resources/asp/rules.asp";
-    private static final int horizon = 40;
+    private static final String ASP_RULES_FILE = "src/main/resources/asp/rapidRules.asp";
+    private static final int horizon = 15;
 
     private Handler handler;
     private boolean initialized = false;
@@ -118,7 +118,7 @@ public class AspSolver {
 
             // ⚠️ Per debug, NIENTE filter (riattivalo dopo)
             // try { fresh.addOption(new OptionDescriptor("--filter=show_move")); } catch (Throwable ignore) {}
-
+            fresh.addOption(new OptionDescriptor("--time-limit=5")); // 5 secondi max
             // 5) Esegui
             System.out.println("⚙️ Esecuzione DLV2 (no stdin)...");
             Output output = fresh.startSync();
@@ -246,7 +246,7 @@ public class AspSolver {
         // Domini espliciti (safe e solver-friendly)
         int cap = gs.getLevel().getTubeCapacity();
         for (int p = 0; p < cap; p++) sb.append("pos(").append(p).append(").\n");
-        for (int s = 0; s < horizon; s++) sb.append("step(").append(s).append(").\n");
+        for (int s = 0; s <= horizon; s++) sb.append("step(").append(s).append(").\n");
 
         // Stato iniziale
         for (int t = 1; t <= nTubes; t++) {
@@ -334,6 +334,7 @@ public class AspSolver {
 
 
     /** Stampa di debug degli answer set, leggibili */
+    /** Stampa di debug degli answer set, leggibili - VERSIONE CORRETTA */
     private static void debugPrintAnswerSets(Output out) {
         if (!(out instanceof AnswerSets)) {
             System.out.println("⚠️ Output non è AnswerSets. toString(): " + out);
@@ -342,23 +343,31 @@ public class AspSolver {
         AnswerSets as = (AnswerSets) out;
 
         System.out.println("👉 Answer sets totali: " + as.getAnswersets().size());
-        if (as.getOptimalAnswerSets() != null && !as.getOptimalAnswerSets().isEmpty()) {
-            System.out.println("👉 Optimal answer sets: " + as.getOptimalAnswerSets().size());
+
+        // CORREZIONE: Controlla se ci sono optimal answer sets prima di accedervi
+        try {
+            List<AnswerSet> optimalSets = as.getOptimalAnswerSets();
+            if (optimalSets != null && !optimalSets.isEmpty()) {
+                System.out.println("👉 Optimal answer sets: " + optimalSets.size());
+            } else {
+                System.out.println("👉 Nessun optimal answer set (normale senza ottimizzazione)");
+            }
+        } catch (Exception e) {
+            System.out.println("👉 Errore accesso optimal sets (normale senza ottimizzazione): " + e.getMessage());
         }
 
         int idx = 0;
         for (AnswerSet a : as.getAnswersets()) {
-            String val = String.valueOf(a.getValue()); // es: "{show_move(2,5,0), show_move(1,3,1), ...}"
+            String val = String.valueOf(a.getValue());
             System.out.println("AS[" + (idx++) + "]: " + val);
         }
-
     }
 
     private static List<ShowMove> extractOptimalMovesSorted(Output output) {
         List<ShowMove> moves = new ArrayList<>();
 
         if (!(output instanceof AnswerSets)) {
-            // fallback: tenta dal toString (di solito non serve)
+            // fallback: tenta dal toString
             String raw = String.valueOf(output);
             Matcher m = MOVE_RE.matcher(raw);
             while (m.find()) {
@@ -373,33 +382,49 @@ public class AspSolver {
 
         AnswerSets as = (AnswerSets) output;
 
-        // Preferisci gli optimal; se vuoti, ripiega su tutti.
-        List<AnswerSet> source = as.getOptimalAnswerSets();
-        if (source == null || source.isEmpty()) {
+        // CORREZIONE: Gestione sicura degli optimal answer sets
+        List<AnswerSet> source = null;
+        try {
+            source = as.getOptimalAnswerSets();
+            if (source == null || source.isEmpty()) {
+                source = as.getAnswersets();
+            }
+        } catch (Exception e) {
+            // Se getOptimalAnswerSets() fallisce, usa tutti gli answer sets
+            System.out.println("⚠️ Fallback a tutti gli answer sets: " + e.getMessage());
             source = as.getAnswersets();
         }
-        if (source == null || source.isEmpty()) return moves;
 
-        // Prendi il PRIMO answer set nella lista scelta (di solito l’unico ottimo)
+        if (source == null || source.isEmpty()) {
+            System.out.println("⚠️ Nessun answer set disponibile");
+            return moves;
+        }
+
+        // Prendi il PRIMO answer set nella lista scelta
         AnswerSet best = source.get(0);
-        String val = String.valueOf(best.getValue()); // es: "{show_move(...), ...}" o "[show_move(...), ...]"
-        if (val == null || val.isEmpty()) return moves;
+        String val = String.valueOf(best.getValue());
+        if (val == null || val.isEmpty()) {
+            System.out.println("⚠️ Answer set vuoto");
+            return moves;
+        }
+
+        System.out.println("🔍 Parsing answer set: " + val);
 
         Matcher m = MOVE_RE.matcher(val);
         while (m.find()) {
-            moves.add(new ShowMove(
-                    Integer.parseInt(m.group(1)),
-                    Integer.parseInt(m.group(2)),
-                    Integer.parseInt(m.group(3))));
+            int from = Integer.parseInt(m.group(1));
+            int to = Integer.parseInt(m.group(2));
+            int step = Integer.parseInt(m.group(3));
+            moves.add(new ShowMove(from, to, step));
+            System.out.println("   📝 Trovata mossa: " + from + " -> " + to + " (step " + step + ")");
         }
 
         // Ordina per step
         moves.sort(Comparator.comparingInt(ShowMove::getStep));
+        System.out.println("✅ Mosse totali parsate e ordinate: " + moves.size());
+
         return moves;
     }
-
-
-
 
     /**
      * Pulisce le risorse

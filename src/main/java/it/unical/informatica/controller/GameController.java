@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * Controller principale del gioco Bubble Sorting.
  * Gestisce la logica di gioco, l'interazione con ASP e la comunicazione con la vista.
- * Segue il pattern MVC e gestisce tutte le operazioni ASP in background.
+ * VERSIONE AGGIORNATA con supporto per risoluzione automatica animata.
  */
 public class GameController {
 
@@ -106,6 +106,28 @@ public class GameController {
     private void initializeServices() {
         hintService = new HintService();
         solveService = new SolveService();
+
+        // Configura i callback per i servizi
+        hintService.setOnSucceeded(e -> {
+            ShowMove hint = hintService.getValue();
+            handleHintResult(hint);
+        });
+
+        hintService.setOnFailed(e -> {
+            Throwable exception = hintService.getException();
+            handleHintError(exception);
+        });
+
+        solveService.setOnSucceeded(e -> {
+            List<ShowMove> solution = solveService.getValue();
+            handleSolutionResult(solution);
+        });
+
+        solveService.setOnFailed(e -> {
+            Throwable exception = solveService.getException();
+            handleSolutionError(exception);
+        });
+
         System.out.println("✅ Servizi background inizializzati");
     }
 
@@ -145,7 +167,13 @@ public class GameController {
 
         gameView.setOnSolveRequested(() -> {
             try {
-                solveAutomatically();
+                if (gameView.isAutoSolving()) {
+                    // Se è in corso la risoluzione automatica, fermala
+                    stopAutoSolving();
+                } else {
+                    // Altrimenti avvia la risoluzione automatica
+                    solveAutomatically();
+                }
             } catch (Exception e) {
                 showError("Errore nella risoluzione", e.getMessage());
             }
@@ -159,7 +187,7 @@ public class GameController {
             }
         });
 
-        // ✅ AGGIUNTO: Handler per l'esecuzione delle mosse
+        // Handler per l'esecuzione delle mosse
         gameView.setOnMoveRequested((fromTubeId, toTubeId) -> {
             try {
                 executeMove(fromTubeId, toTubeId);
@@ -224,6 +252,9 @@ public class GameController {
         try {
             System.out.println("🔄 Riavvio del gioco...");
 
+            // Ferma la risoluzione automatica se in corso
+            stopAutoSolving();
+
             gameState.reset();
             updateView();
 
@@ -267,8 +298,8 @@ public class GameController {
      * @param tubeId ID del tubo cliccato
      */
     private void handleTubeClick(int tubeId) {
-        if (isProcessingMove || gameState.isGameWon()) {
-            System.out.println("⏸️ Click ignorato: gioco in elaborazione o già vinto");
+        if (isProcessingMove || gameState.isGameWon() || gameView.isAutoSolving()) {
+            System.out.println("⏸️ Click ignorato: gioco in elaborazione, già vinto o risoluzione automatica in corso");
             return;
         }
 
@@ -313,7 +344,7 @@ public class GameController {
             if (success) {
                 System.out.println("✅ Mossa eseguita con successo");
 
-                // ✅ ANIMAZIONE + AGGIORNAMENTO VISTA
+                // Animazione + aggiornamento vista
                 if (gameView != null) {
                     gameView.animateMove(fromTubeId, toTubeId, () -> {
                         // Callback dopo l'animazione
@@ -345,7 +376,7 @@ public class GameController {
      * Annulla l'ultima mossa
      */
     private void undoLastMove() {
-        if (isProcessingMove || !gameState.canUndo()) {
+        if (isProcessingMove || !gameState.canUndo() || gameView.isAutoSolving()) {
             System.out.println("⏸️ Impossibile annullare la mossa");
             return;
         }
@@ -369,15 +400,15 @@ public class GameController {
     }
 
     // ===============================
-    // INTEGRAZIONE ASP
+    // INTEGRAZIONE ASP - VERSIONE AGGIORNATA
     // ===============================
 
     /**
      * Mostra un suggerimento usando ASP
      */
     private void showHint() {
-        if (isShowingHint || gameState.isGameWon()) {
-            System.out.println("⏸️ Suggerimento già in corso o gioco terminato");
+        if (isShowingHint || gameState.isGameWon() || gameView.isAutoSolving()) {
+            System.out.println("⏸️ Suggerimento già in corso, gioco terminato o risoluzione automatica in corso");
             return;
         }
 
@@ -389,24 +420,93 @@ public class GameController {
 
         System.out.println("💡 Richiesta suggerimento...");
         gameView.showMessage("Elaborazione suggerimento...");
+        isShowingHint = true;
 
         hintService.restart();
     }
 
     /**
-     * Ri
-     *automaticamente il puzzle usando ASP
+     * Gestisce il risultato del suggerimento
+     */
+    private void handleHintResult(ShowMove hint) {
+        Platform.runLater(() -> {
+            isShowingHint = false;
+
+            if (hint != null) {
+                System.out.println("✅ Suggerimento ricevuto: " + (hint.getFrom() - 1) + " -> " + (hint.getTo() - 1));
+
+                // Converti ShowMove in Move per la visualizzazione
+                Move moveHint = new Move(hint.getFrom() - 1, hint.getTo() - 1, null);
+                gameView.showHint(moveHint);
+                gameView.showMessage("💡 Suggerimento: Sposta dal tubo " + hint.getFrom() + " al tubo " + hint.getTo());
+            } else {
+                System.out.println("❌ Nessun suggerimento disponibile");
+                gameView.showMessage("Nessun suggerimento disponibile");
+            }
+        });
+    }
+
+    /**
+     * Gestisce gli errori nei suggerimenti
+     */
+    private void handleHintError(Throwable error) {
+        Platform.runLater(() -> {
+            isShowingHint = false;
+            System.err.println("❌ Errore nel calcolo del suggerimento: " + error.getMessage());
+            gameView.showMessage("Errore nel calcolo del suggerimento");
+        });
+    }
+
+    /**
+     * Risolve automaticamente il puzzle usando ASP
      */
     private void solveAutomatically() {
-        if (isProcessingMove || gameState.isGameWon()) {
+        if (isProcessingMove || gameState.isGameWon() || gameView.isAutoSolving()) {
             System.out.println("⏸️ Risoluzione automatica non disponibile");
             return;
         }
 
-        System.out.println("🤖 Risoluzione automatica...");
-        gameView.showMessage("Risoluzione puzzle in corso...");
+        System.out.println("🤖 Avvio risoluzione automatica...");
+        gameView.showMessage("Calcolo della soluzione in corso...");
 
         solveService.restart();
+    }
+
+    /**
+     * Ferma la risoluzione automatica
+     */
+    private void stopAutoSolving() {
+        if (gameView != null && gameView.isAutoSolving()) {
+            System.out.println("⏹ Interruzione risoluzione automatica...");
+            gameView.stopAutoSolving();
+        }
+    }
+
+    /**
+     * Gestisce il risultato della risoluzione ASP
+     */
+    private void handleSolutionResult(List<ShowMove> solution) {
+        Platform.runLater(() -> {
+            if (solution != null && !solution.isEmpty()) {
+                System.out.println("✅ Soluzione trovata con " + solution.size() + " mosse");
+
+                // Avvia la risoluzione automatica animata
+                gameView.handleSolution(solution);
+            } else {
+                System.out.println("❌ Nessuna soluzione trovata");
+                gameView.showMessage("Impossibile trovare una soluzione per questo puzzle");
+            }
+        });
+    }
+
+    /**
+     * Gestisce gli errori nella risoluzione ASP
+     */
+    private void handleSolutionError(Throwable error) {
+        Platform.runLater(() -> {
+            System.err.println("❌ Errore nella risoluzione: " + error.getMessage());
+            gameView.showMessage("Errore nel calcolo della soluzione");
+        });
     }
 
     // ===============================
@@ -429,6 +529,9 @@ public class GameController {
         System.out.println("🎉 GIOCO VINTO!");
 
         try {
+            // Ferma la risoluzione automatica se in corso
+            stopAutoSolving();
+
             // Salva il progresso
             preferences.setLevelCompleted(gameLevel, levelNumber, gameState.getMoves());
 
@@ -493,9 +596,12 @@ public class GameController {
             return new Task<ShowMove>() {
                 @Override
                 protected ShowMove call() throws Exception {
-                    // ✅ CORREZIONE: Usa il metodo corretto
-                    //return aspSolver.getHint(gameState);
-                    return null;
+                    if (aspSolver == null) {
+                        throw new Exception("AspSolver non disponibile");
+                    }
+
+                    // Utilizza il metodo getHint del solver ASP
+                    return aspSolver.getHint(gameState);
                 }
             };
         }
@@ -510,7 +616,11 @@ public class GameController {
             return new Task<List<ShowMove>>() {
                 @Override
                 protected List<ShowMove> call() throws Exception {
-                    // ✅ CORREZIONE: Usa il metodo corretto
+                    if (aspSolver == null) {
+                        throw new Exception("AspSolver non disponibile");
+                    }
+
+                    // Utilizza il metodo solve del solver ASP
                     return aspSolver.solve(gameState);
                 }
             };
@@ -556,6 +666,9 @@ public class GameController {
         try {
             System.out.println("🧹 Pulizia risorse GameController...");
 
+            // Ferma la risoluzione automatica se in corso
+            stopAutoSolving();
+
             if (hintService != null && hintService.isRunning()) {
                 hintService.cancel();
             }
@@ -565,7 +678,7 @@ public class GameController {
             }
 
             if (aspSolver != null) {
-                //aspSolver.cleanup();
+                aspSolver.cleanup();
             }
 
             System.out.println("✅ Risorse pulite");

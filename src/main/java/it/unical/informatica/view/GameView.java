@@ -3,6 +3,7 @@ package it.unical.informatica.view;
 import it.unical.informatica.controller.GameEventHandler;
 import it.unical.informatica.controller.GamePreferences;
 import it.unical.informatica.model.*;
+import it.unical.informatica.asp.ShowMove;
 import javafx.animation.*;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
@@ -34,6 +35,7 @@ public class GameView {
     private static final double BALL_RADIUS = 15;
     private static final double TUBE_SPACING = 20;
     private static final double ANIMATION_DURATION = 300; // millisecondi
+    private static final double AUTO_SOLVE_DELAY = 800; // Pausa tra le mosse nella risoluzione automatica
 
     // ===== COMPONENTI CORE =====
     private final GameLevel gameLevel;
@@ -50,6 +52,12 @@ public class GameView {
     private boolean animationsEnabled;
     private boolean soundEnabled;
     private boolean hintsEnabled;
+
+    // ===== STATO RISOLUZIONE AUTOMATICA =====
+    private boolean isAutoSolving = false;
+    private List<ShowMove> solutionMoves = new ArrayList<>();
+    private int currentSolutionStep = 0;
+    private Timeline autoSolveTimeline;
 
     // ===== COMPONENTI UI =====
     private Text movesText;
@@ -69,7 +77,7 @@ public class GameView {
     private GameEventHandler.ActionHandler onHintRequested;
     private GameEventHandler.ActionHandler onSolveRequested;
     private GameEventHandler.ActionHandler onUndoRequested;
-    private GameEventHandler.MoveHandler onMoveRequested; // ✅ AGGIUNTO
+    private GameEventHandler.MoveHandler onMoveRequested;
 
     // ===============================
     // COSTRUTTORE E INIZIALIZZAZIONE
@@ -240,6 +248,7 @@ public class GameView {
         restartButton.setOnAction(e -> {
             if (onRestartRequested != null) {
                 try {
+                    stopAutoSolving(); // Ferma la risoluzione automatica se in corso
                     onRestartRequested.onAction();
                 } catch (Exception ex) {
                     System.err.println("❌ Errore nel restart: " + ex.getMessage());
@@ -250,6 +259,7 @@ public class GameView {
         menuButton.setOnAction(e -> {
             if (onMenuRequested != null) {
                 try {
+                    stopAutoSolving(); // Ferma la risoluzione automatica se in corso
                     onMenuRequested.onAction();
                 } catch (Exception ex) {
                     System.err.println("❌ Errore nel menu: " + ex.getMessage());
@@ -258,7 +268,7 @@ public class GameView {
         });
 
         undoButton.setOnAction(e -> {
-            if (onUndoRequested != null) {
+            if (onUndoRequested != null && !isAutoSolving) { // Non permettere undo durante auto-solve
                 try {
                     onUndoRequested.onAction();
                 } catch (Exception ex) {
@@ -268,7 +278,7 @@ public class GameView {
         });
 
         hintButton.setOnAction(e -> {
-            if (onHintRequested != null) {
+            if (onHintRequested != null && !isAutoSolving) {
                 try {
                     onHintRequested.onAction();
                 } catch (Exception ex) {
@@ -280,7 +290,11 @@ public class GameView {
         solveButton.setOnAction(e -> {
             if (onSolveRequested != null) {
                 try {
-                    onSolveRequested.onAction();
+                    if (isAutoSolving) {
+                        stopAutoSolving();
+                    } else {
+                        onSolveRequested.onAction();
+                    }
                 } catch (Exception ex) {
                     System.err.println("❌ Errore nella risoluzione: " + ex.getMessage());
                 }
@@ -347,14 +361,24 @@ public class GameView {
      */
     private void updateButtonStates(GameState gameState) {
         Platform.runLater(() -> {
-            undoButton.setDisable(!gameState.canUndo());
+            undoButton.setDisable(!gameState.canUndo() || isAutoSolving);
 
             if (gameState.isGameWon()) {
                 hintButton.setDisable(true);
                 solveButton.setDisable(true);
             } else {
-                hintButton.setDisable(!hintsEnabled);
-                solveButton.setDisable(false);
+                hintButton.setDisable(!hintsEnabled || isAutoSolving);
+
+                if (isAutoSolving) {
+                    solveButton.setText("⏹ Stop");
+                    solveButton.getStyleClass().removeAll("ai-button");
+                    solveButton.getStyleClass().add("danger-button");
+                } else {
+                    solveButton.setText("🤖 Risolvi");
+                    solveButton.getStyleClass().removeAll("danger-button");
+                    solveButton.getStyleClass().add("ai-button");
+                    solveButton.setDisable(false);
+                }
             }
         });
     }
@@ -369,6 +393,11 @@ public class GameView {
      * @param gameState Stato corrente del gioco
      */
     public void handleTubeSelection(int tubeId, GameState gameState) {
+        if (isAutoSolving) {
+            showMessage("Risoluzione automatica in corso...");
+            return;
+        }
+
         if (selectedTubeId == -1) {
             // Prima selezione
             selectTube(tubeId, gameState);
@@ -432,7 +461,7 @@ public class GameView {
             return;
         }
 
-        // ✅ CORREZIONE: Notifica al GameController di eseguire la mossa
+        // Notifica al GameController di eseguire la mossa
         if (onMoveRequested != null) {
             onMoveRequested.onMove(fromTubeId, toTubeId);
         }
@@ -489,19 +518,12 @@ public class GameView {
         try {
             System.out.println("🎬 Avvio animazione: " + fromTubeId + " → " + toTubeId);
 
-            // Animazione semplificata
-            Timeline timeline = new Timeline();
-            timeline.setOnFinished(e -> {
-                if (onComplete != null) {
-                    onComplete.run();
-                }
-            });
+            // Ottieni i contenitori dei tubi
+            VBox fromContainer = tubeViews.get(fromTubeId).getContainer();
+            VBox toContainer = tubeViews.get(toTubeId).getContainer();
 
-            // Keyframe semplice per la durata dell'animazione
-            timeline.getKeyFrames().add(
-                    new KeyFrame(Duration.millis(ANIMATION_DURATION))
-            );
-            timeline.play();
+            // Animazione migliorata con movimento reale della pallina
+            createBallMoveAnimation(fromContainer, toContainer, onComplete);
 
         } catch (Exception e) {
             System.err.println("❌ Errore nell'animazione: " + e.getMessage());
@@ -510,6 +532,32 @@ public class GameView {
                 onComplete.run();
             }
         }
+    }
+
+    /**
+     * Crea un'animazione realistica del movimento della pallina
+     */
+    private void createBallMoveAnimation(VBox fromContainer, VBox toContainer, Runnable onComplete) {
+        // Per ora manteniamo l'animazione semplice, ma funzionale
+        Timeline timeline = new Timeline();
+
+        // Animazione di evidenziazione dei tubi coinvolti
+        KeyFrame highlight = new KeyFrame(Duration.millis(50), e -> {
+            fromContainer.getStyleClass().add("moving-from");
+            toContainer.getStyleClass().add("moving-to");
+        });
+
+        // Rimozione dell'evidenziazione e callback
+        KeyFrame finish = new KeyFrame(Duration.millis(ANIMATION_DURATION), e -> {
+            fromContainer.getStyleClass().removeAll("moving-from");
+            toContainer.getStyleClass().removeAll("moving-to");
+            if (onComplete != null) {
+                onComplete.run();
+            }
+        });
+
+        timeline.getKeyFrames().addAll(highlight, finish);
+        timeline.play();
     }
 
     /**
@@ -529,11 +577,225 @@ public class GameView {
     }
 
     // ===============================
+    // RISOLUZIONE AUTOMATICA - NUOVE FUNZIONALITÀ
+    // ===============================
+
+    /**
+     * Avvia la risoluzione automatica animata del puzzle
+     * @param solution Lista delle mosse da eseguire
+     */
+    public void startAutoSolve(List<ShowMove> solution) {
+        if (solution == null || solution.isEmpty()) {
+            showMessage("Nessuna soluzione trovata!");
+            return;
+        }
+
+        if (isAutoSolving) {
+            showMessage("Risoluzione automatica già in corso...");
+            return;
+        }
+
+        System.out.println("🤖 Avvio risoluzione automatica con " + solution.size() + " mosse");
+
+        this.solutionMoves = new ArrayList<>(solution);
+        this.currentSolutionStep = 0;
+        this.isAutoSolving = true;
+
+        // Disabilita l'interazione dell'utente
+        disableUserInteraction();
+
+        // Mostra messaggio informativo
+        showMessage("🤖 Risoluzione automatica in corso... Mossa 1/" + solution.size());
+
+        // Avvia l'esecuzione delle mosse
+        executeNextSolutionMove();
+    }
+
+    /**
+     * Esegue la prossima mossa della soluzione
+     */
+    private void executeNextSolutionMove() {
+        if (!isAutoSolving || currentSolutionStep >= solutionMoves.size()) {
+            // Soluzione completata
+            finishAutoSolve();
+            return;
+        }
+
+        ShowMove move = solutionMoves.get(currentSolutionStep);
+
+        // Converti gli ID da ASP (1-based) a Java (0-based)
+        int fromTube = move.getFrom() - 1;
+        int toTube = move.getTo() - 1;
+
+        System.out.println("🎯 Esecuzione mossa automatica " + (currentSolutionStep + 1) + "/" +
+                solutionMoves.size() + ": " + (fromTube + 1) + " → " + (toTube + 1));
+
+        // Evidenzia i tubi coinvolti nella mossa
+        highlightAutoSolveMove(fromTube, toTube);
+
+        // Esegui la mossa tramite il controller
+        if (onMoveRequested != null) {
+            onMoveRequested.onMove(fromTube, toTube);
+        }
+
+        currentSolutionStep++;
+
+        // Aggiorna il messaggio
+        if (currentSolutionStep < solutionMoves.size()) {
+            showMessage("🤖 Risoluzione automatica in corso... Mossa " +
+                    (currentSolutionStep + 1) + "/" + solutionMoves.size());
+        }
+
+        // Programma la prossima mossa dopo un delay
+        scheduleNextMove();
+    }
+
+    /**
+     * Programma l'esecuzione della prossima mossa
+     */
+    private void scheduleNextMove() {
+        if (!isAutoSolving) return;
+
+        autoSolveTimeline = new Timeline(new KeyFrame(
+                Duration.millis(AUTO_SOLVE_DELAY),
+                e -> executeNextSolutionMove()
+        ));
+        autoSolveTimeline.play();
+    }
+
+    /**
+     * Evidenzia i tubi coinvolti nella mossa automatica
+     */
+    private void highlightAutoSolveMove(int fromTube, int toTube) {
+        Platform.runLater(() -> {
+            // Pulisce tutti gli highlight precedenti
+            clearHighlights();
+
+            // Evidenzia i tubi della mossa corrente
+            if (fromTube >= 0 && fromTube < tubeViews.size()) {
+                tubeViews.get(fromTube).setAutoSolveHighlight(true);
+            }
+            if (toTube >= 0 && toTube < tubeViews.size()) {
+                tubeViews.get(toTube).setAutoSolveHighlight(true);
+            }
+
+            // Rimuovi l'evidenziazione dopo un breve periodo
+            Timeline clearHighlight = new Timeline(new KeyFrame(
+                    Duration.millis(AUTO_SOLVE_DELAY * 0.7),
+                    e -> {
+                        if (fromTube >= 0 && fromTube < tubeViews.size()) {
+                            tubeViews.get(fromTube).setAutoSolveHighlight(false);
+                        }
+                        if (toTube >= 0 && toTube < tubeViews.size()) {
+                            tubeViews.get(toTube).setAutoSolveHighlight(false);
+                        }
+                    }
+            ));
+            clearHighlight.play();
+        });
+    }
+
+    /**
+     * Ferma la risoluzione automatica
+     */
+    public void stopAutoSolving() {
+        if (!isAutoSolving) return;
+
+        System.out.println("⏹ Interruzione risoluzione automatica");
+
+        isAutoSolving = false;
+        solutionMoves.clear();
+        currentSolutionStep = 0;
+
+        // Ferma il timer se attivo
+        if (autoSolveTimeline != null) {
+            autoSolveTimeline.stop();
+            autoSolveTimeline = null;
+        }
+
+        // Riabilita l'interazione dell'utente
+        enableUserInteraction();
+
+        // Pulisce gli highlight
+        clearHighlights();
+        clearAutoSolveHighlights();
+
+        // Aggiorna i pulsanti
+        updateButtonStates(currentGameState);
+
+        showMessage("Risoluzione automatica interrotta");
+    }
+
+    /**
+     * Completa la risoluzione automatica
+     */
+    private void finishAutoSolve() {
+        System.out.println("✅ Risoluzione automatica completata!");
+
+        isAutoSolving = false;
+        solutionMoves.clear();
+        currentSolutionStep = 0;
+
+        // Riabilita l'interazione dell'utente
+        enableUserInteraction();
+
+        // Pulisce gli highlight
+        clearHighlights();
+        clearAutoSolveHighlights();
+
+        // Aggiorna i pulsanti
+        updateButtonStates(currentGameState);
+
+        showMessage("🎉 Puzzle risolto automaticamente!");
+
+        // Mostra animazione di vittoria se il gioco è completato
+        if (currentGameState != null && currentGameState.isGameWon()) {
+            showVictoryAnimation();
+        }
+    }
+
+    /**
+     * Disabilita l'interazione dell'utente durante la risoluzione automatica
+     */
+    private void disableUserInteraction() {
+        Platform.runLater(() -> {
+            // Disabilita i click sui tubi
+            for (TubeView tubeView : tubeViews) {
+                tubeView.setInteractionEnabled(false);
+            }
+
+            // Aggiorna lo stato dei pulsanti
+            updateButtonStates(currentGameState);
+        });
+    }
+
+    /**
+     * Riabilita l'interazione dell'utente
+     */
+    private void enableUserInteraction() {
+        Platform.runLater(() -> {
+            // Riabilita i click sui tubi
+            for (TubeView tubeView : tubeViews) {
+                tubeView.setInteractionEnabled(true);
+            }
+        });
+    }
+
+    /**
+     * Pulisce tutti gli highlight della risoluzione automatica
+     */
+    private void clearAutoSolveHighlights() {
+        for (TubeView tubeView : tubeViews) {
+            tubeView.setAutoSolveHighlight(false);
+        }
+    }
+
+    // ===============================
     // FUNZIONALITÀ ASP
     // ===============================
 
     /**
-     * Mostra un suggerimento visivamente
+     * Mostra un suggerimento visualmente
      */
     public void showHint(Move hint) {
         if (hint == null) return;
@@ -557,8 +819,28 @@ public class GameView {
     }
 
     /**
-     * Mostra la soluzione completa
+     * Gestisce la soluzione ASP - METODO PRINCIPALE PER LA RISOLUZIONE AUTOMATICA
      */
+    public void handleSolution(List<ShowMove> solution) {
+        if (solution == null || solution.isEmpty()) {
+            Platform.runLater(() -> {
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Nessuna soluzione");
+                alert.setHeaderText("Puzzle non risolvibile");
+                alert.setContentText("Non è stato possibile trovare una soluzione per questo puzzle.");
+                alert.showAndWait();
+            });
+            return;
+        }
+
+        // Avvia la risoluzione automatica animata
+        startAutoSolve(solution);
+    }
+
+    /**
+     * Mostra la soluzione completa (modalità precedente - ora deprecata)
+     */
+    @Deprecated
     public void showSolution(List<Move> solution) {
         if (solution == null || solution.isEmpty()) return;
 
@@ -627,11 +909,11 @@ public class GameView {
         Platform.runLater(() -> {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Livello Completato!");
-            alert.setHeaderText("🎉 Congratulazioni!");
+            alert.setHeaderText("Congratulazioni!");
 
             String content = String.format(
                     "Hai completato il livello!\n\n" +
-                            "📊 Statistiche:\n" +
+                            "Statistiche:\n" +
                             "• Mosse utilizzate: %d\n" +
                             "• Punteggio: %d punti\n" +
                             "• Livello: %s\n\n" +
@@ -669,7 +951,7 @@ public class GameView {
      */
     public void setAnimationsEnabled(boolean enabled) {
         this.animationsEnabled = enabled;
-        System.out.println("🎬 Animazioni " + (enabled ? "abilitate" : "disabilitate"));
+        System.out.println("Animazioni " + (enabled ? "abilitate" : "disabilitate"));
     }
 
     /**
@@ -677,7 +959,7 @@ public class GameView {
      */
     public void setSoundEnabled(boolean enabled) {
         this.soundEnabled = enabled;
-        System.out.println("🔊 Suono " + (enabled ? "abilitato" : "disabilitato"));
+        System.out.println("Suono " + (enabled ? "abilitato" : "disabilitato"));
     }
 
     /**
@@ -686,15 +968,15 @@ public class GameView {
     public void setHintsEnabled(boolean enabled) {
         this.hintsEnabled = enabled;
         hintButton.setDisable(!enabled);
-        System.out.println("💡 Suggerimenti " + (enabled ? "abilitati" : "disabilitati"));
+        System.out.println("Suggerimenti " + (enabled ? "abilitati" : "disabilitati"));
     }
 
     // ===============================
-    // CLASSE INTERNA TUBEVIEW
+    // CLASSE INTERNA TUBEVIEW - VERSIONE ESTESA
     // ===============================
 
     /**
-     * Classe per rappresentare visivamente un singolo tubo
+     * Classe per rappresentare visualmente un singolo tubo
      */
     private class TubeView {
         private final int tubeId;
@@ -705,6 +987,8 @@ public class GameView {
         private boolean selected = false;
         private boolean highlighted = false;
         private boolean hinted = false;
+        private boolean autoSolveHighlighted = false;
+        private boolean interactionEnabled = true;
 
         public TubeView(int tubeId) {
             this.tubeId = tubeId;
@@ -738,7 +1022,7 @@ public class GameView {
 
             // Click handler
             container.setOnMouseClicked(e -> {
-                if (onTubeClicked != null) {
+                if (onTubeClicked != null && interactionEnabled) {
                     onTubeClicked.onTubeClicked(tubeId);
                 }
             });
@@ -785,8 +1069,18 @@ public class GameView {
             updateVisualState();
         }
 
+        public void setAutoSolveHighlight(boolean highlighted) {
+            this.autoSolveHighlighted = highlighted;
+            updateVisualState();
+        }
+
+        public void setInteractionEnabled(boolean enabled) {
+            this.interactionEnabled = enabled;
+            container.setDisable(!enabled);
+        }
+
         private void updateVisualState() {
-            container.getStyleClass().removeAll("selected", "highlighted", "hinted");
+            container.getStyleClass().removeAll("selected", "highlighted", "hinted", "auto-solve-highlight");
 
             if (selected) {
                 container.getStyleClass().add("selected");
@@ -796,6 +1090,9 @@ public class GameView {
             }
             if (hinted) {
                 container.getStyleClass().add("hinted");
+            }
+            if (autoSolveHighlighted) {
+                container.getStyleClass().add("auto-solve-highlight");
             }
         }
 
@@ -823,6 +1120,10 @@ public class GameView {
 
     public GameLevel getGameLevel() {
         return gameLevel;
+    }
+
+    public boolean isAutoSolving() {
+        return isAutoSolving;
     }
 
     // Event handlers setters
