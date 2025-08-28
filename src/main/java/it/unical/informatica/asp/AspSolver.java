@@ -90,6 +90,7 @@ public class AspSolver {
 
         // 1) Costruisci i fatti (usa la tua buildFacts o la versione safe)
         final String factsBlock = buildFacts(gameState, horizon);
+        System.out.println(horizon);
         System.out.println("===== FACTS (preview) =====\n" + factsBlock + "===========================");
 
         java.io.File tmpFacts = null;
@@ -118,7 +119,8 @@ public class AspSolver {
 
             // ⚠️ Per debug, NIENTE filter (riattivalo dopo)
             // try { fresh.addOption(new OptionDescriptor("--filter=show_move")); } catch (Throwable ignore) {}
-            fresh.addOption(new OptionDescriptor("--time-limit=5")); // 5 secondi max
+            //fresh.addOption(new OptionDescriptor("--time-limit=5")); // 5 secondi max
+            //
             // 5) Esegui
             System.out.println("⚙️ Esecuzione DLV2 (no stdin)...");
             Output output = fresh.startSync();
@@ -233,6 +235,18 @@ public class AspSolver {
         System.out.println("   init_ball totali: " + totalBalls);
     }*/
     public static String buildFacts(GameState gs, int horizon) {
+        String difficulty = gs.getLevel().getDisplayName();
+        System.out.println(difficulty);
+        if(difficulty.equals("Facile")){
+            horizon = 15;
+        }
+        else if(difficulty.equals("Medio")){
+            horizon = 25;
+        }
+        else if(difficulty.equals("Difficile")){
+            horizon = 45;
+        }
+
         StringBuilder sb = new StringBuilder(1024);
 
         // Parametri base
@@ -363,7 +377,7 @@ public class AspSolver {
         }
     }
 
-    private static List<ShowMove> extractOptimalMovesSorted(Output output) {
+    /*private static List<ShowMove> extractOptimalMovesSorted(Output output) {
         List<ShowMove> moves = new ArrayList<>();
 
         if (!(output instanceof AnswerSets)) {
@@ -424,7 +438,62 @@ public class AspSolver {
         System.out.println("✅ Mosse totali parsate e ordinate: " + moves.size());
 
         return moves;
+    }*/
+
+    private List<ShowMove> extractOptimalMovesSorted(Output output) {
+        List<ShowMove> moves = new ArrayList<>();
+
+        if (!(output instanceof AnswerSets)) {
+            System.err.println("⚠️ Output non è di tipo AnswerSets");
+            return moves;
+        }
+
+        AnswerSets answerSets = (AnswerSets) output;
+
+        // 1. Recupera prima gli optimal answer set (se disponibili)
+        List<AnswerSet> source;
+        try {
+            source = answerSets.getOptimalAnswerSets();
+            if (source == null || source.isEmpty()) {
+                System.out.println("ℹ️ Nessun optimal answer set, uso tutti gli answer set");
+                source = answerSets.getAnswersets();
+            }
+        } catch (Exception e) {
+            System.out.println("⚠️ Errore durante getOptimalAnswerSets(), fallback: " + e.getMessage());
+            source = answerSets.getAnswersets();
+        }
+
+        if (source == null || source.isEmpty()) {
+            System.out.println("⚠️ Nessun answer set disponibile");
+            return moves;
+        }
+
+        // 2. Prendi SOLO il primo answer set (il più ottimo)
+        AnswerSet best = source.get(0);
+        System.out.println("🔍 Parsing del primo answer set ottimo...");
+
+        try {
+            for (Object atom : best.getAtoms()) {
+                if (atom instanceof ShowMove) {
+                    ShowMove move = (ShowMove) atom;
+                    moves.add(move);
+                    System.out.println("   📝 Mossa trovata: " +
+                            move.getFrom() + " -> " + move.getTo() +
+                            " (step " + move.getStep() + ")");
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Errore parsing atoms: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        // 3. Ordina le mosse per step
+        moves.sort(Comparator.comparingInt(ShowMove::getStep));
+        System.out.println("✅ Mosse estratte e ordinate: " + moves.size());
+
+        return moves;
     }
+
 
     /**
      * Pulisce le risorse

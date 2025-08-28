@@ -6,13 +6,17 @@ import it.unical.mat.embasp.languages.ObjectNotValidException;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.geometry.Pos;
 import javafx.geometry.Insets;
+import javafx.scene.effect.DropShadow;
+import javafx.scene.paint.Color;
 import it.unical.informatica.controller.GameEventHandler;
 
 /**
- * Vista del menu principale del gioco
+ * Vista del menu principale con design moderno ispirato a CrazyGames
  */
 public class MenuView {
 
@@ -30,197 +34,206 @@ public class MenuView {
         createMenuScene();
     }
 
-    /**
-     * Crea la scena del menu principale
-     */
     private void createMenuScene() {
+        // Container principale con layout migliorato
         mainContainer = new VBox();
         mainContainer.getStyleClass().add("menu-container");
         mainContainer.setAlignment(Pos.CENTER);
-        mainContainer.setSpacing(30);
+        mainContainer.setSpacing(40);
+        mainContainer.setPadding(new Insets(50));
 
-        // Titolo del gioco
+        // Sezioni del menu
         createTitle();
-
-        // Pulsanti del menu
         createMenuButtons();
-
-        // Informazioni del progetto
         createProjectInfo();
 
-        // Crea la scena
-        scene = new Scene(mainContainer, 800, 600);
+        // Crea la scena con dimensioni moderne
+        scene = new Scene(mainContainer, 1000, 700);
         scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
     }
 
-    /**
-     * Crea il titolo del gioco
-     */
     private void createTitle() {
-        VBox titleBox = new VBox();
-        titleBox.setAlignment(Pos.CENTER);
-        titleBox.setSpacing(10);
+        VBox titleSection = new VBox();
+        titleSection.setAlignment(Pos.CENTER);
+        titleSection.setSpacing(15);
 
+        // Titolo principale con effetto moderno
         Text title = new Text("Bubble Sorting Game");
         title.getStyleClass().add("menu-title");
+        title.setFont(Font.font("System", FontWeight.BOLD, 52));
+        title.setFill(Color.WHITE);
 
-        Text subtitle = new Text("Ordina le palline colorate - Progetto di Intelligenza Artificiale");
+        // Effetto ombra per il titolo
+        DropShadow shadow = new DropShadow();
+        shadow.setColor(Color.rgb(0, 0, 0, 0.4));
+        shadow.setRadius(10);
+        shadow.setOffsetY(4);
+        title.setEffect(shadow);
+
+        // Sottotitolo elegante
+        Text subtitle = new Text("Ordina le palline colorate con l'intelligenza artificiale");
         subtitle.getStyleClass().add("menu-subtitle");
+        subtitle.setFont(Font.font("System", FontWeight.NORMAL, 18));
+        subtitle.setFill(Color.rgb(255, 255, 255, 0.9));
 
-        titleBox.getChildren().addAll(title, subtitle);
-        mainContainer.getChildren().add(titleBox);
+        titleSection.getChildren().addAll(title, subtitle);
+        mainContainer.getChildren().add(titleSection);
     }
 
-    /**
-     * Crea i pulsanti del menu
-     */
     private void createMenuButtons() {
-        VBox buttonBox = new VBox();
-        buttonBox.setAlignment(Pos.CENTER);
-        buttonBox.setSpacing(15);
-        buttonBox.setPadding(new Insets(20, 0, 20, 0));
+        VBox buttonSection = new VBox();
+        buttonSection.setAlignment(Pos.CENTER);
+        buttonSection.setSpacing(20);
+        buttonSection.setPadding(new Insets(30, 0, 30, 0));
 
-        // Pulsante Nuova Partita
-        Button newGameButton = createMenuButton("🎮 Nuova Partita", "menu-button");
+        // Pulsante principale - Nuova Partita
+        Button newGameButton = createPrimaryButton("🎮 Nuova Partita");
         newGameButton.setOnAction(e -> showDifficultySelection());
 
-        // Pulsante Regole
-        Button rulesButton = createMenuButton("📖 Regole del Gioco", "menu-button secondary-button");
+        // Pulsanti secondari
+        Button rulesButton = createSecondaryButton("📖 Regole del Gioco");
         rulesButton.setOnAction(e -> {
             if (onRulesSelected != null) {
                 try {
                     onRulesSelected.onAction();
-                } catch (ObjectNotValidException ex) {
-                    throw new RuntimeException(ex);
-                } catch (IllegalAnnotationException ex) {
-                    throw new RuntimeException(ex);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
                 }
             }
         });
 
-        // Pulsante Impostazioni
-        Button settingsButton = createMenuButton("⚙️ Impostazioni", "menu-button secondary-button");
+        Button settingsButton = createSecondaryButton("⚙️ Impostazioni");
         settingsButton.setOnAction(e -> {
             if (onSettingsSelected != null) {
                 try {
                     onSettingsSelected.onAction();
-                } catch (ObjectNotValidException ex) {
-                    throw new RuntimeException(ex);
-                } catch (IllegalAnnotationException ex) {
-                    throw new RuntimeException(ex);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
                 }
             }
         });
 
-        // Pulsante Info
-        Button aboutButton = createMenuButton("ℹ️ Info Progetto", "menu-button secondary-button");
+        Button aboutButton = createSecondaryButton("ℹ️ Info Progetto");
         aboutButton.setOnAction(e -> {
             if (onAboutSelected != null) {
                 try {
                     onAboutSelected.onAction();
-                } catch (ObjectNotValidException ex) {
-                    throw new RuntimeException(ex);
-                } catch (IllegalAnnotationException ex) {
-                    throw new RuntimeException(ex);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
                 }
             }
         });
 
-        // Pulsante Esci
-        Button exitButton = createMenuButton("🚪 Esci", "menu-button danger-button");
+        // Pulsante uscita con stile diverso
+        Button exitButton = createDangerButton("🚪 Esci");
         exitButton.setOnAction(e -> {
             if (onExitSelected != null) {
                 try {
                     onExitSelected.onAction();
-                } catch (ObjectNotValidException ex) {
-                    throw new RuntimeException(ex);
-                } catch (IllegalAnnotationException ex) {
-                    throw new RuntimeException(ex);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
                 }
             }
         });
 
-        buttonBox.getChildren().addAll(
+        buttonSection.getChildren().addAll(
                 newGameButton, rulesButton, settingsButton, aboutButton, exitButton
         );
 
-        mainContainer.getChildren().add(buttonBox);
+        mainContainer.getChildren().add(buttonSection);
     }
 
-    /**
-     * Crea un pulsante del menu con stile
-     */
-    private Button createMenuButton(String text, String styleClass) {
+    private Button createPrimaryButton(String text) {
         Button button = new Button(text);
-        button.getStyleClass().addAll(styleClass.split(" "));
-        button.setMaxWidth(Double.MAX_VALUE);
+        button.getStyleClass().addAll("menu-button", "primary-button");
+        button.setFont(Font.font("System", FontWeight.BOLD, 20));
+        button.setPrefWidth(350);
+        button.setPrefHeight(60);
         return button;
     }
 
-    /**
-     * Crea le informazioni del progetto in basso
-     */
-    private void createProjectInfo() {
-        VBox infoBox = new VBox();
-        infoBox.setAlignment(Pos.CENTER);
-        infoBox.setSpacing(5);
+    private Button createSecondaryButton(String text) {
+        Button button = new Button(text);
+        button.getStyleClass().addAll("menu-button", "secondary-button");
+        button.setFont(Font.font("System", FontWeight.SEMI_BOLD, 16));
+        button.setPrefWidth(320);
+        button.setPrefHeight(50);
+        return button;
+    }
 
-        Text projectInfo = new Text("Università della Calabria - Corso di Intelligenza Artificiale");
-        projectInfo.getStyleClass().add("menu-subtitle");
-        projectInfo.setStyle("-fx-font-size: 12px;");
+    private Button createDangerButton(String text) {
+        Button button = new Button(text);
+        button.getStyleClass().addAll("menu-button", "danger-button");
+        button.setFont(Font.font("System", FontWeight.SEMI_BOLD, 16));
+        button.setPrefWidth(280);
+        button.setPrefHeight(45);
+        return button;
+    }
+
+    private void createProjectInfo() {
+        VBox infoSection = new VBox();
+        infoSection.setAlignment(Pos.CENTER);
+        infoSection.setSpacing(8);
+
+        Text universityInfo = new Text("Università della Calabria - Corso di Intelligenza Artificiale");
+        universityInfo.getStyleClass().add("menu-subtitle");
+        universityInfo.setFont(Font.font("System", FontWeight.NORMAL, 14));
+        universityInfo.setFill(Color.rgb(255, 255, 255, 0.8));
 
         Text techInfo = new Text("Java + Answer Set Programming (ASP) + JavaFX");
         techInfo.getStyleClass().add("menu-subtitle");
-        techInfo.setStyle("-fx-font-size: 10px; -fx-opacity: 0.8;");
+        techInfo.setFont(Font.font("System", FontWeight.LIGHT, 12));
+        techInfo.setFill(Color.rgb(255, 255, 255, 0.7));
 
-        infoBox.getChildren().addAll(projectInfo, techInfo);
+        infoSection.getChildren().addAll(universityInfo, techInfo);
 
-        // Posiziona in basso
+        // Spacer per spingere le info in basso
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
 
-        mainContainer.getChildren().addAll(spacer, infoBox);
+        mainContainer.getChildren().addAll(spacer, infoSection);
     }
 
-    /**
-     * Mostra la selezione della difficoltà
-     */
     private void showDifficultySelection() {
         Dialog<GameLevel> dialog = new Dialog<>();
         dialog.setTitle("Seleziona Difficoltà");
         dialog.setHeaderText("Scegli il livello di difficoltà per iniziare a giocare");
 
-        // Crea il contenuto del dialog
+        // Container del dialog con design moderno
         VBox content = new VBox();
-        content.setSpacing(20);
-        content.setPadding(new Insets(20));
+        content.setSpacing(25);
+        content.setPadding(new Insets(30));
         content.setAlignment(Pos.CENTER);
+        content.getStyleClass().add("dialog-content");
 
         ToggleGroup difficultyGroup = new ToggleGroup();
 
         for (GameLevel level : GameLevel.values()) {
-            VBox levelBox = createDifficultyOption(level, difficultyGroup);
-            content.getChildren().add(levelBox);
+            VBox levelCard = createDifficultyCard(level, difficultyGroup);
+            content.getChildren().add(levelCard);
         }
 
         dialog.getDialogPane().setContent(content);
         dialog.getDialogPane().getStylesheets().add(
                 getClass().getResource("/css/style.css").toExternalForm());
 
-        // Pulsanti
-        ButtonType playButtonType = new ButtonType("Gioca!", ButtonBar.ButtonData.OK_DONE);
-        ButtonType cancelButtonType = new ButtonType("Annulla", ButtonBar.ButtonData.CANCEL_CLOSE);
+        // Pulsanti con stile moderno
+        ButtonType playButtonType = new ButtonType("🎮 Gioca!", ButtonBar.ButtonData.OK_DONE);
+        ButtonType cancelButtonType = new ButtonType("❌ Annulla", ButtonBar.ButtonData.CANCEL_CLOSE);
         dialog.getDialogPane().getButtonTypes().addAll(playButtonType, cancelButtonType);
 
-        // Disabilita il pulsante Gioca finché non si seleziona una difficoltà
+        // Logica dei pulsanti
         Button playButton = (Button) dialog.getDialogPane().lookupButton(playButtonType);
         playButton.setDisable(true);
+        playButton.getStyleClass().add("dialog-button-primary");
+
+        Button cancelButton = (Button) dialog.getDialogPane().lookupButton(cancelButtonType);
+        cancelButton.getStyleClass().add("dialog-button-secondary");
 
         difficultyGroup.selectedToggleProperty().addListener((obs, oldToggle, newToggle) -> {
             playButton.setDisable(newToggle == null);
         });
 
-        // Converter per il risultato
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == playButtonType && difficultyGroup.getSelectedToggle() != null) {
                 return (GameLevel) difficultyGroup.getSelectedToggle().getUserData();
@@ -228,122 +241,131 @@ public class MenuView {
             return null;
         });
 
-        // Mostra il dialog e gestisci il risultato
         dialog.showAndWait().ifPresent(level -> {
             if (onNewGameSelected != null) {
-                onNewGameSelected.onNewGame(level, 1); // Inizia dal livello 1
+                onNewGameSelected.onNewGame(level, 1);
             }
         });
     }
 
-    /**
-     * Crea un'opzione di difficoltà per il dialog
-     */
-    private VBox createDifficultyOption(GameLevel level, ToggleGroup group) {
-        VBox optionBox = new VBox();
-        optionBox.setAlignment(Pos.CENTER);
-        optionBox.setSpacing(10);
-        optionBox.setPadding(new Insets(15));
-        optionBox.getStyleClass().add("level-card");
+    private VBox createDifficultyCard(GameLevel level, ToggleGroup group) {
+        VBox card = new VBox();
+        card.setAlignment(Pos.CENTER);
+        card.setSpacing(12);
+        card.setPrefSize(280, 120);
+        card.getStyleClass().add("difficulty-card");
 
         RadioButton radioButton = new RadioButton();
         radioButton.setToggleGroup(group);
         radioButton.setUserData(level);
+        radioButton.getStyleClass().add("difficulty-radio");
 
         Text levelName = new Text(level.getDisplayName());
-        levelName.getStyleClass().add("level-number");
-        levelName.setStyle("-fx-font-size: 20px;");
+        levelName.setFont(Font.font("System", FontWeight.BOLD, 22));
+        levelName.getStyleClass().add("difficulty-name");
 
-        Text levelInfo = new Text(String.format("%d tubi, %d colori",
+        Text levelDetails = new Text(String.format("%d tubi • %d colori",
                 level.getNumberOfTubes(), level.getNumberOfColors()));
-        levelInfo.setStyle("-fx-font-size: 12px; -fx-fill: #666666;");
+        levelDetails.setFont(Font.font("System", FontWeight.NORMAL, 14));
+        levelDetails.getStyleClass().add("difficulty-details");
 
-        optionBox.getChildren().addAll(radioButton, levelName, levelInfo);
+        Text levelDescription = new Text(getDifficultyDescription(level));
+        levelDescription.setFont(Font.font("System", FontWeight.LIGHT, 12));
+        levelDescription.getStyleClass().add("difficulty-description");
+        levelDescription.setWrappingWidth(250);
+
+        card.getChildren().addAll(radioButton, levelName, levelDetails, levelDescription);
 
         // Rendi cliccabile tutta la card
-        optionBox.setOnMouseClicked(e -> radioButton.setSelected(true));
+        card.setOnMouseClicked(e -> radioButton.setSelected(true));
 
-        return optionBox;
+        return card;
     }
 
-    /**
-     * Mostra il dialog delle regole
-     */
+    private String getDifficultyDescription(GameLevel level) {
+        return switch (level) {
+            case EASY -> "Perfetto per iniziare e imparare le basi";
+            case MEDIUM -> "Sfida equilibrata per giocatori esperti";
+            case HARD -> "Test estremo delle tue abilità strategiche";
+        };
+    }
+
     public void showRulesDialog() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Regole del Gioco");
         alert.setHeaderText("Come giocare a Bubble Sorting Game");
 
         String rulesText = """
-            🎯 OBIETTIVO:
+            OBIETTIVO:
             Ordinare tutte le palline colorate in modo che ogni tubo contenga solo palline dello stesso colore.
             
-            🎮 COME GIOCARE:
+            COME GIOCARE:
             • Clicca su un tubo per selezionare la pallina in cima
             • Clicca su un altro tubo per spostare la pallina
             • Puoi spostare una pallina solo se:
               - Il tubo di destinazione ha spazio
               - Il tubo di destinazione è vuoto OPPURE la pallina in cima è dello stesso colore
             
-            📊 MODALITÀ:
+            MODALITÀ:
             • Facile: 6 tubi, 4 colori
             • Medio: 7 tubi, 5 colori  
             • Difficile: 9 tubi, 7 colori
             
-            ⭐ VALUTAZIONE:
+            VALUTAZIONE:
             Meno mosse usi, più stelle ottieni!
             
-            💡 SUGGERIMENTI:
+            SUGGERIMENTI:
             • Usa i tubi vuoti per organizzare le palline
             • Pianifica le mosse in anticipo
-            • Usa il pulsante "Suggerimento" se sei bloccato
+            • Usa i pulsanti AI se sei bloccato:
+              - Suggerimento: Una singola mossa consigliata
+              - Risoluzione Ottima: Soluzione migliore (più lenta)
+              - Risoluzione Rapida: Soluzione veloce (meno ottimale)
             """;
 
         alert.setContentText(rulesText);
-        alert.getDialogPane().setPrefWidth(500);
+        alert.getDialogPane().setPrefWidth(550);
         alert.getDialogPane().getStylesheets().add(
                 getClass().getResource("/css/style.css").toExternalForm());
 
         alert.showAndWait();
     }
 
-    /**
-     * Mostra il dialog delle informazioni
-     */
     public void showAboutDialog() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Informazioni sul Progetto");
         alert.setHeaderText("Bubble Sorting Game - Progetto di Intelligenza Artificiale");
 
         String aboutText = """
-            🎓 PROGETTO UNIVERSITARIO
+            PROGETTO UNIVERSITARIO
             Università della Calabria
             Corso di Laurea in Informatica
             Corso: Intelligenza Artificiale
             
-            💻 TECNOLOGIE UTILIZZATE:
+            TECNOLOGIE UTILIZZATE:
             • Java 17+ con JavaFX per l'interfaccia grafica
             • Answer Set Programming (ASP) per la logica AI
             • Solver: DLV, DLV2, Clingo
             • Pattern architetturale: Model-View-Controller (MVC)
             
-            🧠 INTELLIGENZA ARTIFICIALE:
+            INTELLIGENZA ARTIFICIALE:
             Il gioco utilizza ASP (Answer Set Programming) per:
             • Fornire suggerimenti intelligenti
             • Risolvere automaticamente i puzzle
             • Verificare la risolvibilità dei livelli
+            • Due modalità di risoluzione: ottima e rapida
             
-            🎮 CARATTERISTICHE:
-            • 3 livelli di difficoltà
+            CARATTERISTICHE:
+            • 3 livelli di difficoltà 
             • 15 livelli totali (5 per difficoltà)
             • Sistema di salvataggio progresso
             • Animazioni fluide e interfaccia moderna
+            • Design ispirato ai giochi web moderni
             
-            📧 SVILUPPATO CON ❤️
+            SVILUPPATO CON DEDIZIONE
             """;
 
         alert.setContentText(aboutText);
-        alert.getDialogPane().setPrefWidth(550);
+        alert.getDialogPane().setPrefWidth(600);
         alert.getDialogPane().getStylesheets().add(
                 getClass().getResource("/css/style.css").toExternalForm());
 
