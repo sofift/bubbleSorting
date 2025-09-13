@@ -12,46 +12,26 @@ import javafx.scene.control.Alert;
 
 import java.util.List;
 
-/**
- * Controller principale del gioco Bubble Sorting.
- * Gestisce la logica di gioco, l'interazione con ASP e la comunicazione con la vista.
- * VERSIONE AGGIORNATA con supporto per risoluzione automatica animata.
- */
 public class GameController {
-
-    // ===== DIPENDENZE =====
     private final Stage primaryStage;
     private final MenuController menuController;
     private final GameLevel gameLevel;
     private final int levelNumber;
 
-    // ===== COMPONENTI CORE =====
     private GameState gameState;
     private GameView gameView;
     private AspSolver aspSolver;
     private GamePreferences preferences;
 
-    // ===== STATO DEL CONTROLLER =====
+    // stato view
     private boolean isProcessingMove = false;
     private boolean isShowingHint = false;
     private boolean gameInitialized = false;
 
-
-    // ===== SERVIZI BACKGROUND =====
+    // servizi
     private HintService hintService;
     private SolveService solveService;
 
-    // ===============================
-    // COSTRUTTORE E INIZIALIZZAZIONE
-    // ===============================
-
-    /**
-     * Costruttore del GameController
-     * @param primaryStage Stage principale dell'applicazione
-     * @param menuController Controller del menu per il ritorno
-     * @param gameLevel Livello di difficoltà
-     * @param levelNumber Numero del livello (1-5)
-     */
     public GameController(Stage primaryStage, MenuController menuController,
                           GameLevel gameLevel, int levelNumber) {
         this.primaryStage = primaryStage;
@@ -63,52 +43,27 @@ public class GameController {
         initializeComponents();
     }
 
-    /**
-     * Inizializza tutti i componenti del controller
-     */
     private void initializeComponents() {
         try {
-            System.out.println("🎮 Inizializzazione GameController...");
-
-            // Crea lo stato del gioco
             gameState = new GameState(gameLevel, levelNumber);
-            System.out.println("✅ GameState creato");
-
-            // Crea la vista del gioco
             gameView = new GameView(gameLevel);
-            System.out.println("✅ GameView creata");
-
-            // Inizializza il solver ASP
             aspSolver = new AspSolver();
-            System.out.println("✅ AspSolver inizializzato");
-
-            // Configura gli event handlers
             setupEventHandlers();
-
-            // Inizializza i servizi background
             initializeServices();
-
-            // Aggiorna la vista con lo stato iniziale
             updateView();
 
             gameInitialized = true;
-            System.out.println("✅ GameController inizializzato correttamente");
 
         } catch (Exception e) {
-            System.err.println("❌ Errore nell'inizializzazione del GameController: " + e.getMessage());
             e.printStackTrace();
             handleInitializationError(e);
         }
     }
 
-    /**
-     * Inizializza i servizi per operazioni in background
-     */
     private void initializeServices() {
         hintService = new HintService();
         solveService = new SolveService();
 
-        // Configura i callback per i servizi
         hintService.setOnSucceeded(e -> {
             ShowMove hint = hintService.getValue();
             handleHintResult(hint);
@@ -137,19 +92,14 @@ public class GameController {
             gameView.setBusyCursor(false);
         });
 
-        System.out.println("✅ Servizi background inizializzati");
+
     }
 
-    /**
-     * Configura tutti gli event handlers della vista
-     */
     private void setupEventHandlers() {
         if (gameView == null) return;
 
-        // Handler per il click sui tubi
         gameView.setOnTubeClicked(this::handleTubeClick);
 
-        // Handler per i pulsanti di controllo
         gameView.setOnRestartRequested(() -> {
             try {
                 restartGame();
@@ -177,10 +127,8 @@ public class GameController {
         gameView.setOnSolveRequested(() -> {
             try {
                 if (gameView.isAutoSolving()) {
-                    // Se è in corso la risoluzione automatica, fermala
                     stopAutoSolving();
                 } else {
-                    // Altrimenti avvia la risoluzione automatica
                     solveAutomatically();
                 }
             } catch (Exception e) {
@@ -188,7 +136,6 @@ public class GameController {
             }
         });
 
-        // Handler per l'esecuzione delle mosse
         gameView.setOnMoveRequested((fromTubeId, toTubeId) -> {
             try {
                 executeMove(fromTubeId, toTubeId);
@@ -197,12 +144,9 @@ public class GameController {
             }
         });
 
-        System.out.println("✅ Event handlers configurati");
     }
 
-    /**
-     * Gestisce gli errori di inizializzazione
-     */
+
     private void handleInitializationError(Exception e) {
         Platform.runLater(() -> {
             Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -214,13 +158,7 @@ public class GameController {
         });
     }
 
-    // ===============================
-    // AVVIO E CONTROLLO DEL GIOCO
-    // ===============================
 
-    /**
-     * Avvia il gioco mostrando la vista
-     */
     public void startGame() {
         try {
             if (!gameInitialized) {
@@ -231,168 +169,109 @@ public class GameController {
                 throw new IllegalStateException("La vista del gioco non è disponibile");
             }
 
-            // Mostra la scena del gioco
             primaryStage.setScene(gameView.getScene());
             primaryStage.setTitle("Bubble Sorting Game - " +
                     gameLevel.getDisplayName() + " - Livello " + levelNumber);
 
-            System.out.println("🚀 Gioco avviato: " + gameLevel.getDisplayName() + " - Livello " + levelNumber);
-
         } catch (Exception e) {
-            System.err.println("❌ Errore nell'avvio del gioco: " + e.getMessage());
             returnToMenu();
         }
     }
 
-    /**
-     * Riavvia il gioco allo stato iniziale
-     */
+
     private void restartGame() {
         if (isProcessingMove) return;
 
         try {
-            System.out.println("🔄 Riavvio del gioco...");
-
-            // Ferma la risoluzione automatica se in corso
             stopAutoSolving();
 
             gameState.reset();
             updateView();
 
-            System.out.println("✅ Gioco riavviato");
-
         } catch (Exception e) {
-            System.err.println("❌ Errore nel riavvio: " + e.getMessage());
             showError("Errore nel riavvio", e.getMessage());
         }
     }
 
-    /**
-     * Torna al menu principale
-     */
     private void returnToMenu() {
         try {
-            System.out.println("🏠 Ritorno al menu principale...");
-
-            // Cleanup delle risorse
             cleanup();
 
             if (menuController != null) {
                 menuController.returnToMenu();
-            } else {
-                System.err.println("❌ MenuController non disponibile");
             }
 
         } catch (Exception e) {
-            System.err.println("❌ Errore nel ritorno al menu: " + e.getMessage());
-            // Forza la chiusura in caso di errore
             Platform.exit();
         }
     }
 
-    // ===============================
-    // GESTIONE DELLE MOSSE
-    // ===============================
-
-    /**
-     * Gestisce il click su un tubo
-     * @param tubeId ID del tubo cliccato
-     */
     private void handleTubeClick(int tubeId) {
         if (isProcessingMove || gameState.isGameWon() || gameView.isAutoSolving()) {
-            System.out.println("⏸️ Click ignorato: gioco in elaborazione, già vinto o risoluzione automatica in corso");
             return;
         }
 
         if (!GameEventHandler.EventValidator.isValidTubeId(tubeId, gameState.getTubes().size())) {
-            System.err.println("❌ ID tubo non valido: " + tubeId);
             return;
         }
 
         try {
-            System.out.println("👆 Click su tubo: " + tubeId);
             gameView.handleTubeSelection(tubeId, gameState);
 
         } catch (Exception e) {
-            System.err.println("❌ Errore nella gestione del click: " + e.getMessage());
             showError("Errore nel click", e.getMessage());
         }
     }
 
-    /**
-     * Esegue una mossa nel gioco
-     * @param fromTubeId Tubo di origine
-     * @param toTubeId Tubo di destinazione
-     * @return true se la mossa è stata eseguita con successo
-     */
+
     public boolean executeMove(int fromTubeId, int toTubeId) {
         if (isProcessingMove || gameState.isGameWon()) {
             return false;
         }
 
         if (!GameEventHandler.EventValidator.isValidMove(fromTubeId, toTubeId, gameState.getTubes().size())) {
-            System.err.println("❌ Mossa non valida: " + fromTubeId + " -> " + toTubeId);
             return false;
         }
 
         try {
             isProcessingMove = true;
 
-            System.out.println("🎯 Esecuzione mossa: " + fromTubeId + " -> " + toTubeId);
-
             boolean success = gameState.makeMove(fromTubeId, toTubeId);
 
             if (success) {
-                System.out.println("✅ Mossa eseguita con successo");
-
-                // Animazione + aggiornamento vista
                 if (gameView != null) {
                     gameView.animateMove(fromTubeId, toTubeId, () -> {
-                        // Callback dopo l'animazione
                         updateView();
                         checkWinCondition();
                         isProcessingMove = false;
                     });
                 } else {
-                    // Senza animazione
                     updateView();
                     checkWinCondition();
                     isProcessingMove = false;
                 }
             } else {
-                System.out.println("❌ Mossa fallita");
                 isProcessingMove = false;
             }
 
             return success;
 
         } catch (Exception e) {
-            System.err.println("❌ Errore nell'esecuzione della mossa: " + e.getMessage());
             isProcessingMove = false;
             return false;
         }
     }
 
-    // ===============================
-    // INTEGRAZIONE ASP - VERSIONE AGGIORNATA
-    // ===============================
-
-    /**
-     * Mostra un suggerimento usando ASP
-     */
     private void showHint() {
         if (isShowingHint || gameState.isGameWon() || gameView.isAutoSolving()) {
-            System.out.println("⏸️ Suggerimento già in corso, gioco terminato o risoluzione automatica in corso");
             return;
         }
 
         if (!preferences.isShowHints()) {
-            System.out.println("💡 Suggerimenti disabilitati nelle impostazioni");
             gameView.showMessage("Suggerimenti disabilitati nelle impostazioni");
             return;
         }
 
-        System.out.println("💡 Richiesta suggerimento...");
         gameView.showMessage("Elaborazione suggerimento...");
         isShowingHint = true;
         hintService.restart();
@@ -401,118 +280,79 @@ public class GameController {
 
     }
 
-    /**
-     * Gestisce il risultato del suggerimento
-     */
     private void handleHintResult(ShowMove hint) {
         Platform.runLater(() -> {
             isShowingHint = false;
 
             if (hint != null) {
-                System.out.println("✅ Suggerimento ricevuto: " + (hint.getFrom() - 1) + " -> " + (hint.getTo() - 1));
-
-                // Converti ShowMove in Move per la visualizzazione
                 Move moveHint = new Move(hint.getFrom() - 1, hint.getTo() - 1, null);
                 gameView.showHint(moveHint);
-                gameView.showMessage("💡 Suggerimento: Sposta dal tubo " + hint.getFrom() + " al tubo " + hint.getTo());
+                gameView.showMessage("Suggerimento: Sposta dal tubo " + hint.getFrom() + " al tubo " + hint.getTo());
             } else {
-                System.out.println("❌ Nessun suggerimento disponibile");
                 gameView.showMessage("Nessun suggerimento disponibile");
             }
         });
     }
 
-    /**
-     * Gestisce gli errori nei suggerimenti
-     */
+
     private void handleHintError(Throwable error) {
         Platform.runLater(() -> {
             isShowingHint = false;
-            System.err.println("❌ Errore nel calcolo del suggerimento: " + error.getMessage());
             gameView.showMessage("Errore nel calcolo del suggerimento");
         });
     }
 
-    /**
-     * Risolve automaticamente il puzzle usando ASP
-     */
+
     private void solveAutomatically() {
         if (isProcessingMove || gameState.isGameWon() || gameView.isAutoSolving()) {
-            System.out.println("⏸️ Risoluzione automatica non disponibile");
             return;
         }
 
-        System.out.println("🤖 Avvio risoluzione automatica...");
         gameView.showMessage("Calcolo della soluzione in corso...");
         gameView.lockTubeInteractions(true);
         gameView.setBusyCursor(true);
         solveService.restart();
     }
 
-    /**
-     * Ferma la risoluzione automatica
-     */
+
     private void stopAutoSolving() {
         if (gameView != null && gameView.isAutoSolving()) {
-            System.out.println("⏹ Interruzione risoluzione automatica...");
-            gameView.stopAutoSolving();
+           gameView.stopAutoSolving();
         }
     }
 
-    /**
-     * Gestisce il risultato della risoluzione ASP
-     */
+
     private void handleSolutionResult(List<ShowMove> solution) {
         Platform.runLater(() -> {
             if (solution != null && !solution.isEmpty()) {
-                System.out.println("✅ Soluzione trovata con " + solution.size() + " mosse");
-
-                // Avvia la risoluzione automatica animata
                 gameView.handleSolution(solution);
             } else {
-                System.out.println("❌ Nessuna soluzione trovata");
                 gameView.showMessage("Impossibile trovare una soluzione per questo puzzle");
             }
         });
     }
 
-    /**
-     * Gestisce gli errori nella risoluzione ASP
-     */
+
     private void handleSolutionError(Throwable error) {
         Platform.runLater(() -> {
-            System.err.println("❌ Errore nella risoluzione: " + error.getMessage());
             gameView.showMessage("Errore nel calcolo della soluzione");
         });
     }
 
-    // ===============================
-    // GESTIONE VITTORIA
-    // ===============================
 
-    /**
-     * Controlla se il gioco è stato vinto e gestisce la vittoria
-     */
     private void checkWinCondition() {
         if (gameState.isGameWon()) {
             handleGameWon();
         }
     }
 
-    /**
-     * Gestisce la vittoria del gioco
-     */
-    private void handleGameWon() {
-        System.out.println("🎉 GIOCO VINTO!");
 
+    private void handleGameWon() {
         try {
-            // Ferma la risoluzione automatica se in corso
             stopAutoSolving();
 
-            // Salva il progresso
             preferences.setLevelCompleted(gameLevel, levelNumber, gameState.getMoves());
 
-            // Mostra il messaggio di vittoria
             Platform.runLater(() -> {
                 gameView.showVictoryAnimation();
                 gameView.showVictoryDialog(
@@ -525,7 +365,7 @@ public class GameController {
             });
 
         } catch (Exception e) {
-            System.err.println("❌ Errore nella gestione della vittoria: " + e.getMessage());
+            System.err.println("Errore nella gestione della vittoria: " + e.getMessage());
         }
     }
 
@@ -535,38 +375,26 @@ public class GameController {
     private void nextLevel() {
         try {
             if (levelNumber < gameLevel.getMaxLevels()) {
-                // Livello successivo nella stessa difficoltà
-                System.out.println("➡️ Passaggio al livello successivo...");
-                GameController nextController = new GameController(
+               GameController nextController = new GameController(
                         primaryStage, menuController, gameLevel, levelNumber + 1);
                 nextController.startGame();
             } else {
                 // Ultimo livello della difficoltà
                 GameLevel nextDifficulty = gameLevel.getNextLevel();
                 if (nextDifficulty != null) {
-                    System.out.println("⬆️ Passaggio alla difficoltà successiva...");
                     GameController nextController = new GameController(
                             primaryStage, menuController, nextDifficulty, 1);
                     nextController.startGame();
                 } else {
-                    System.out.println("🏆 Tutti i livelli completati!");
                     gameView.showMessage("Congratulazioni! Hai completato tutti i livelli!");
                     returnToMenu();
                 }
             }
         } catch (Exception e) {
-            System.err.println("❌ Errore nel passaggio al livello successivo: " + e.getMessage());
             returnToMenu();
         }
     }
 
-    // ===============================
-    // SERVIZI BACKGROUND (ASP)
-    // ===============================
-
-    /**
-     * Servizio per calcolare suggerimenti in background
-     */
     private class HintService extends Service<ShowMove> {
         @Override
         protected Task<ShowMove> createTask() {
@@ -584,9 +412,7 @@ public class GameController {
         }
     }
 
-    /**
-     * Servizio per la risoluzione automatica in background
-     */
+
     private class SolveService extends Service<List<ShowMove>> {
         @Override
         protected Task<List<ShowMove>> createTask() {
@@ -604,28 +430,19 @@ public class GameController {
         }
     }
 
-    // ===============================
-    // UTILITY E CLEANUP
-    // ===============================
-
-    /**
-     * Aggiorna la vista con lo stato corrente del gioco
-     */
     private void updateView() {
         if (gameView != null && gameState != null) {
             Platform.runLater(() -> {
                 try {
                     gameView.updateGameState(gameState);
                 } catch (Exception e) {
-                    System.err.println("❌ Errore nell'aggiornamento della vista: " + e.getMessage());
+                    System.err.println("Errore nell'aggiornamento della vista: " + e.getMessage());
                 }
             });
         }
     }
 
-    /**
-     * Mostra un messaggio di errore all'utente
-     */
+
     private void showError(String title, String message) {
         Platform.runLater(() -> {
             Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -636,14 +453,9 @@ public class GameController {
         });
     }
 
-    /**
-     * Pulisce le risorse del controller
-     */
+
     private void cleanup() {
         try {
-            System.out.println("🧹 Pulizia risorse GameController...");
-
-            // Ferma la risoluzione automatica se in corso
             stopAutoSolving();
 
             if (hintService != null && hintService.isRunning()) {
@@ -658,16 +470,12 @@ public class GameController {
                 aspSolver.cleanup();
             }
 
-            System.out.println("✅ Risorse pulite");
 
         } catch (Exception e) {
-            System.err.println("❌ Errore nella pulizia: " + e.getMessage());
+            System.err.println("Errore nella pulizia: " + e.getMessage());
         }
     }
 
-    // ===============================
-    // GETTERS PUBBLICI
-    // ===============================
 
     public GameView getGameView() {
         return gameView;

@@ -20,7 +20,6 @@ public class BallFact {
         this.color = color;
     }
 
-    // Getters e setters necessari per EmbASP
     public int getTube() { return tube; }
     public void setTube(int tube) { this.tube = tube; }
     public int getPosition() { return position; }
