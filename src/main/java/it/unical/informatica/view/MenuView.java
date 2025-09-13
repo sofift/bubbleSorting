@@ -100,27 +100,6 @@ public class MenuView {
             }
         });
 
-        Button settingsButton = createSecondaryButton("⚙️ Impostazioni");
-        settingsButton.setOnAction(e -> {
-            if (onSettingsSelected != null) {
-                try {
-                    onSettingsSelected.onAction();
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            }
-        });
-
-        Button aboutButton = createSecondaryButton("ℹ️ Info Progetto");
-        aboutButton.setOnAction(e -> {
-            if (onAboutSelected != null) {
-                try {
-                    onAboutSelected.onAction();
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            }
-        });
 
         // Pulsante uscita con stile diverso
         Button exitButton = createDangerButton("🚪 Esci");
@@ -135,7 +114,7 @@ public class MenuView {
         });
 
         buttonSection.getChildren().addAll(
-                newGameButton, rulesButton, settingsButton, aboutButton, exitButton
+                newGameButton, rulesButton, exitButton
         );
 
         mainContainer.getChildren().add(buttonSection);

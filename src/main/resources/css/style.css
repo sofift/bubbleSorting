@@ -340,67 +340,6 @@
 .star { -fx-font-size: 20px; -fx-fill: #F1C40F; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 3, 0, 0, 1); }
 .star.empty { -fx-fill: rgba(241, 196, 15, 0.35); }
 
-/* ================================
-   SETTINGS
-   ================================ */
-
-.settings-container {
-    /* prima: linear-gradient(#667eea, #764ba2) */
-    -fx-background-color: #1B3A57; /* piatto */
-    -fx-padding: 30;
-    -fx-spacing: 25;
-    -fx-alignment: center;
-}
-
-.settings-section {
-    -fx-background-color: rgba(255, 255, 255, 0.96);
-    -fx-background-radius: 16;
-    -fx-padding: 22;
-    -fx-spacing: 18;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 10, 0, 0, 3);
-    -fx-border-color: rgba(255, 255, 255, 0.28);
-    -fx-border-width: 1;
-    -fx-border-radius: 16;
-}
-
-.settings-title { -fx-font-size: 22px; -fx-font-weight: bold; -fx-fill: #5DADE2; }
-
-.settings-item {
-    -fx-padding: 15;
-    -fx-spacing: 15;
-    -fx-background-color: rgba(255, 255, 255, 0.6);
-    -fx-background-radius: 12;
-    -fx-border-color: rgba(0, 0, 0, 0.10);
-    -fx-border-width: 1;
-    -fx-border-radius: 12;
-}
-
-.settings-label { -fx-font-size: 16px; -fx-font-weight: bold; -fx-fill: #D6EAF8; }
-
-/* ================================
-   CHECKBOXES E RADIO BUTTONS
-   ================================ */
-
-.check-box { -fx-text-fill: #2C3E50; -fx-font-size: 14px; }
-.check-box > .box {
-    -fx-background-color: white;
-    -fx-border-color: #2E86C1;
-    -fx-border-width: 2;
-    -fx-background-radius: 4;
-    -fx-border-radius: 4;
-}
-.check-box:selected > .box { -fx-background-color: #2E86C1; }
-.check-box:selected > .box > .mark { -fx-background-color: white; }
-
-.radio-button { -fx-text-fill: #2C3E50; -fx-font-size: 14px; }
-.radio-button > .radio {
-    -fx-background-color: white;
-    -fx-border-color: #2E86C1;
-    -fx-border-width: 2;
-    -fx-background-radius: 12;
-    -fx-border-radius: 12;
-}
-.radio-button:selected > .radio { -fx-background-color: #2E86C1; }
 
 /* ================================
    DIALOGHI E ALERT

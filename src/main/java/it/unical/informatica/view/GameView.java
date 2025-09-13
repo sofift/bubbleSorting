@@ -50,7 +50,6 @@ public class GameView {
     private List<TubeView> tubeViews;
     private int selectedTubeId = -1;
     private boolean animationsEnabled;
-    private boolean soundEnabled;
     private boolean hintsEnabled;
 
     // ===== STATO RISOLUZIONE AUTOMATICA =====
@@ -58,6 +57,8 @@ public class GameView {
     private List<ShowMove> solutionMoves = new ArrayList<>();
     private int currentSolutionStep = 0;
     private Timeline autoSolveTimeline;
+    private boolean interactionsLocked = false;
+
 
     // ===== COMPONENTI UI =====
     private Text movesText;
@@ -67,7 +68,6 @@ public class GameView {
     private Button menuButton;
     private Button hintButton;
     private Button solveButton;
-    private Button undoButton;
     private ProgressDialog progressDialog;
 
     // ===== EVENT HANDLERS =====
@@ -94,7 +94,6 @@ public class GameView {
         // Carica le preferenze
         GamePreferences preferences = GamePreferences.getInstance();
         this.animationsEnabled = preferences.isAnimationsEnabled();
-        this.soundEnabled = preferences.isSoundEnabled();
         this.hintsEnabled = preferences.isShowHints();
 
         initializeView();
@@ -174,9 +173,7 @@ public class GameView {
 
         restartButton = createControlButton("🔄 Riavvia", "control-button");
         menuButton = createControlButton("🏠 Menu", "control-button secondary-button");
-        undoButton = createControlButton("⏪ Annulla", "control-button");
-
-        mainButtons.getChildren().addAll(restartButton, menuButton, undoButton);
+        mainButtons.getChildren().addAll(restartButton, menuButton);
 
         // Riga inferiore - pulsanti AI
         HBox aiButtons = new HBox();
@@ -274,15 +271,6 @@ public class GameView {
             }
         });
 
-        undoButton.setOnAction(e -> {
-            if (onUndoRequested != null && !isAutoSolving) { // Non permettere undo durante auto-solve
-                try {
-                    onUndoRequested.onAction();
-                } catch (Exception ex) {
-                    System.err.println("❌ Errore nell'undo: " + ex.getMessage());
-                }
-            }
-        });
 
         hintButton.setOnAction(e -> {
             if (onHintRequested != null && !isAutoSolving) {
@@ -368,8 +356,6 @@ public class GameView {
      */
     private void updateButtonStates(GameState gameState) {
         Platform.runLater(() -> {
-            undoButton.setDisable(!gameState.canUndo() || isAutoSolving);
-
             if (gameState.isGameWon()) {
                 hintButton.setDisable(true);
                 solveButton.setDisable(true);
@@ -503,6 +489,21 @@ public class GameView {
         for (TubeView tubeView : tubeViews) {
             tubeView.setSelected(false);
             tubeView.setHighlighted(false);
+        }
+    }
+
+    public void setTubesInteractive(boolean enabled) {
+        interactionsLocked = !enabled;
+        if (gameArea != null) {
+            gameArea.setDisable(!enabled); // disabilita tutti i figli (tubi) in cascata
+        }
+    }
+    public void lockTubeInteractions(boolean lock) {
+        setTubesInteractive(!lock);
+    }
+    public void setBusyCursor(boolean busy) {
+        if (scene != null) {
+            scene.setCursor(busy ? javafx.scene.Cursor.WAIT : javafx.scene.Cursor.DEFAULT);
         }
     }
 
@@ -959,14 +960,6 @@ public class GameView {
     public void setAnimationsEnabled(boolean enabled) {
         this.animationsEnabled = enabled;
         System.out.println("Animazioni " + (enabled ? "abilitate" : "disabilitate"));
-    }
-
-    /**
-     * Abilita o disabilita il suono
-     */
-    public void setSoundEnabled(boolean enabled) {
-        this.soundEnabled = enabled;
-        System.out.println("Suono " + (enabled ? "abilitato" : "disabilitato"));
     }
 
     /**

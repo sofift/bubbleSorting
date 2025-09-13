@@ -33,8 +33,6 @@ public class MenuController {
         // Handler per le regole del gioco
         menuView.setOnRulesSelected(this::showRules);
 
-        // Handler per le impostazioni
-        menuView.setOnSettingsSelected(this::showSettings);
     }
 
     /**
@@ -63,20 +61,6 @@ public class MenuController {
         menuView.showRulesDialog();
     }
 
-    /**
-     * Mostra le impostazioni del gioco
-     */
-    private void showSettings() {
-        SettingsController settingsController = new SettingsController(primaryStage, this);
-        settingsController.show();
-    }
-
-    /**
-     * Mostra informazioni sul progetto
-     */
-    private void showAbout() {
-        menuView.showAboutDialog();
-    }
 
     /**
      * Esce dal gioco

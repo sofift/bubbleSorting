@@ -36,6 +36,7 @@ public class GameController {
     private boolean isShowingHint = false;
     private boolean gameInitialized = false;
 
+
     // ===== SERVIZI BACKGROUND =====
     private HintService hintService;
     private SolveService solveService;
@@ -111,21 +112,29 @@ public class GameController {
         hintService.setOnSucceeded(e -> {
             ShowMove hint = hintService.getValue();
             handleHintResult(hint);
+            gameView.lockTubeInteractions(false);
+            gameView.setBusyCursor(false);
         });
 
         hintService.setOnFailed(e -> {
             Throwable exception = hintService.getException();
             handleHintError(exception);
+            gameView.lockTubeInteractions(false);
+            gameView.setBusyCursor(false);
         });
 
         solveService.setOnSucceeded(e -> {
             List<ShowMove> solution = solveService.getValue();
             handleSolutionResult(solution);
+            gameView.lockTubeInteractions(false);
+            gameView.setBusyCursor(false);
         });
 
         solveService.setOnFailed(e -> {
             Throwable exception = solveService.getException();
             handleSolutionError(exception);
+            gameView.lockTubeInteractions(false);
+            gameView.setBusyCursor(false);
         });
 
         System.out.println("✅ Servizi background inizializzati");
@@ -176,14 +185,6 @@ public class GameController {
                 }
             } catch (Exception e) {
                 showError("Errore nella risoluzione", e.getMessage());
-            }
-        });
-
-        gameView.setOnUndoRequested(() -> {
-            try {
-                undoLastMove();
-            } catch (Exception e) {
-                showError("Errore nell'annullamento", e.getMessage());
             }
         });
 
@@ -372,33 +373,6 @@ public class GameController {
         }
     }
 
-    /**
-     * Annulla l'ultima mossa
-     */
-    private void undoLastMove() {
-        if (isProcessingMove || !gameState.canUndo() || gameView.isAutoSolving()) {
-            System.out.println("⏸️ Impossibile annullare la mossa");
-            return;
-        }
-
-        try {
-            System.out.println("⏪ Annullamento ultima mossa...");
-
-            boolean success = gameState.undoMove();
-
-            if (success) {
-                System.out.println("✅ Mossa annullata");
-                updateView();
-            } else {
-                System.out.println("❌ Impossibile annullare la mossa");
-            }
-
-        } catch (Exception e) {
-            System.err.println("❌ Errore nell'annullamento: " + e.getMessage());
-            showError("Errore nell'annullamento", e.getMessage());
-        }
-    }
-
     // ===============================
     // INTEGRAZIONE ASP - VERSIONE AGGIORNATA
     // ===============================
@@ -421,8 +395,10 @@ public class GameController {
         System.out.println("💡 Richiesta suggerimento...");
         gameView.showMessage("Elaborazione suggerimento...");
         isShowingHint = true;
-
         hintService.restart();
+        gameView.lockTubeInteractions(true);
+        gameView.setBusyCursor(true);
+
     }
 
     /**
@@ -468,7 +444,8 @@ public class GameController {
 
         System.out.println("🤖 Avvio risoluzione automatica...");
         gameView.showMessage("Calcolo della soluzione in corso...");
-
+        gameView.lockTubeInteractions(true);
+        gameView.setBusyCursor(true);
         solveService.restart();
     }
 
