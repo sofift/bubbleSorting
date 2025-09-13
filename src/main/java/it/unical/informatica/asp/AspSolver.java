@@ -8,15 +8,14 @@ import it.unical.mat.embasp.languages.asp.*;
 import it.unical.mat.embasp.platforms.desktop.DesktopHandler;
 import it.unical.mat.embasp.specializations.dlv2.desktop.DLV2DesktopService;
 
+import java.io.FileWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Classe per l'integrazione con ASP usando EmbASP.
- * Gestisce la comunicazione con DLV2 per fornire suggerimenti e soluzioni.
- */
+import static java.nio.charset.StandardCharsets.UTF_8;
+
+
 public class AspSolver {
     private static final String DLV2_PATH = "libs/dlv-2.1.2-win64.exe";
 
@@ -30,18 +29,12 @@ public class AspSolver {
         initializeASP();
     }
 
-    /**
-     * Inizializza il sistema ASP con EmbASP
-     */
     private void initializeASP() throws ASPSolverException {
         try {
-            // Crea il service DLV2 con il path dell'eseguibile
             DLV2DesktopService dlvService = new DLV2DesktopService(DLV2_PATH);
 
-            // Crea l'handler
             handler = new DesktopHandler(dlvService);
 
-            // Registra le classi per il mapping ASP
             ASPMapper.getInstance().registerClass(BallFact.class);
             ASPMapper.getInstance().registerClass(ShowMove.class);
             ASPMapper.getInstance().registerClass(TubeFact.class);
@@ -60,9 +53,6 @@ public class AspSolver {
         }
     }
 
-    /**
-     * Ottiene un suggerimento (prossima mossa migliore)
-     */
     public ShowMove getHint(GameState gameState) throws ASPSolverException {
         if (!initialized) {
             throw new ASPSolverException("Solver non inizializzato");
@@ -77,102 +67,42 @@ public class AspSolver {
         }
     }
 
-    /**
-     * Risolve completamente il puzzle
-     */
-
-    /**
-     * Risolve il puzzle con un orizzonte temporale specifico
-     */
     public List<ShowMove> solve(GameState gameState) throws ASPSolverException {
-        System.out.println("🤖 Avvio risoluzione ASP (file mode, no stdin)...");
+        System.out.println("🤖 Avvio risoluzione ASP (EmbASP object-mode).");
         if (gameState == null) throw new ASPSolverException("GameState nullo");
+        if (!initialized) throw new ASPSolverException("Solver non inizializzato");
 
-        // 1) Costruisci i fatti (usa la tua buildFacts o la versione safe)
-        final String factsBlock = buildFacts(gameState, horizon);
-        System.out.println(horizon);
-        System.out.println("===== FACTS (preview) =====\n" + factsBlock + "===========================");
-
-        java.io.File tmpFacts = null;
         try {
-            // 2) Scrivi i fatti su file temporaneo .lp
-            tmpFacts = java.io.File.createTempFile("asp_facts_", ".lp");
-            try (java.io.FileWriter w = new java.io.FileWriter(tmpFacts, java.nio.charset.StandardCharsets.UTF_8)) {
-                w.write(factsBlock);
-                w.write("\n"); // newline finale
-            }
-            System.out.println("📝 Fatti scritti in: " + tmpFacts.getAbsolutePath());
-
-            // 3) Crea un handler FRESCO ogni volta (evita accumulo programmi)
-            DLV2DesktopService service = new DLV2DesktopService(DLV2_PATH);
-            Handler fresh = new DesktopHandler(service);
-
-            // 4) Aggiungi i file: regole + fatti TEMPORANEI
+            // 1) Programma regole da file (ok tenerlo come path)
             InputProgram rules = new ASPInputProgram();
             rules.addFilesPath(ASP_RULES_FILE);
 
+            // 2) Programma fatti da oggetti mappati
             InputProgram facts = new ASPInputProgram();
-            facts.addFilesPath(tmpFacts.getAbsolutePath());
+            int H = chooseHorizon(gameState);
+            addGameFacts(facts, gameState, H);
 
-            fresh.addProgram(rules);
-            fresh.addProgram(facts);
+            // 3) Usa l'handler già inizializzato da initializeASP()
+            handler.addProgram(rules);
+            handler.addProgram(facts);
 
-            // ⚠️ Per debug, NIENTE filter (riattivalo dopo)
-            // try { fresh.addOption(new OptionDescriptor("--filter=show_move")); } catch (Throwable ignore) {}
-            //fresh.addOption(new OptionDescriptor("--time-limit=5")); // 5 secondi max
-            //
-            // 5) Esegui
-            System.out.println("⚙️ Esecuzione DLV2 (no stdin)...");
-            Output output = fresh.startSync();
+            // 4) Avvia il solver
+            Output output = handler.startSync();
 
-            // 6) RAW output
-            String raw = (output == null) ? "<null Output>" : output.toString();
-            System.out.println("===== RAW ASP OUTPUT =====\n" + raw + "\n==========================");
-
-            // 7) Controlli base
-            if (raw.toUpperCase().contains("INCOHERENT")) {
-                System.out.println("ℹ️ Programma INCOHERENT: nessuna soluzione.");
-                return java.util.Collections.emptyList();
-            }
+            // 5) Debug opzionale
             debugPrintAnswerSets(output);
 
-            // 8) Parse robusto
-
-            //List<ShowMove> moves = processResults(output);
-            //System.out.println("✅ Mosse parsate: " + moves.size());
-            //return moves;
-
+            // 6) Estrai le mosse direttamente dagli atoms mappati (ShowMove)
             List<ShowMove> moves = extractOptimalMovesSorted(output);
-            System.out.println(moves);
-            System.out.println("✅ Mosse parsate: " + moves.size());
+            System.out.println("✅ Mosse parsate (object-mode): " + moves.size());
             return moves;
 
         } catch (Throwable t) {
-            System.err.println("❌ ERRORE nella risoluzione ASP: " + t);
             t.printStackTrace(System.err);
             throw new ASPSolverException("Errore nella risoluzione: " + t.getMessage(), t);
-
-        } finally {
-            // 9) Pulisci il file temporaneo
-            if (tmpFacts != null && tmpFacts.exists()) {
-                boolean del = tmpFacts.delete();
-                if (!del) tmpFacts.deleteOnExit();
-            }
         }
     }
 
-
-    private static String dumpRaw(Output out) {
-        if (out == null) return "<null Output>";
-        // In EmbASP spesso toString() contiene l'answer set già formattato.
-        return out.toString();
-    }
-
-
-
-    /**
-     * Verifica se il puzzle è risolvibile
-     */
     public boolean isSolvable(GameState gameState) throws ASPSolverException {
         try {
             List<ShowMove> solution = solve(gameState); // Test rapido con orizzonte breve
@@ -185,314 +115,134 @@ public class AspSolver {
     /**
      * Aggiunge i fatti del gioco all'InputProgram
      */
-    /*void addGameFacts(InputProgram facts, GameState gameState, int horizon) throws Exception {
-        System.out.println("🔧 Inizio generazione fatti ASP...");
+    // AspSolver.java
+    private void addGameFacts(final InputProgram facts, final GameState gameState, final int horizon) throws Exception {
+        System.out.println("🔧 Generazione fatti ASP (EmbASP mapping).");
 
-        // 1) capacity(4).
-        int capacity = gameState.getLevel().getTubeCapacity(); // dovrebbe essere 4
+        // capacity(4).
+        final int capacity = gameState.getLevel().getTubeCapacity();
         facts.addObjectInput(new CapacityFact(capacity));
         System.out.println("   capacity(" + capacity + ").");
 
-        // 2) tube(1). tube(2). ... (espliciti)
-        int numTubes = gameState.getTubes().size();
+        // tube(1..N).
+        final int numTubes = gameState.getTubes().size();
         for (int t = 1; t <= numTubes; t++) {
             facts.addObjectInput(new TubeFact(t));
-            System.out.println("   tube(" + t + ").");
         }
+        System.out.println("   tube(1.." + numTubes + ").");
 
-        // 3) pos(0). pos(1). pos(2). pos(3).  (espliciti)
+        // pos(0..capacity-1).
         for (int p = 0; p < capacity; p++) {
             facts.addObjectInput(new PosFact(p));
         }
-        System.out.println("   pos(0.."+(capacity-1)+") espansi.");
+        System.out.println("   pos(0.." + (capacity - 1) + ") espansi.");
 
-        // 4) step(0). step(1). ... step(horizon).  (espliciti)
+        // step(0..H).
         for (int s = 0; s <= horizon; s++) {
             facts.addObjectInput(new StepFact(s));
         }
-        System.out.println("   step(0.."+horizon+") espansi.");
+        System.out.println("   step(0.." + horizon + ") espansi.");
 
-        // (facoltativi: se vuoi tenerli per logging/telemetria)
+        // opzionali ma utili a loggare/controllare
         facts.addObjectInput(new NumTubesFact(numTubes));
         facts.addObjectInput(new HorizonFact(horizon));
 
-        // 5) init_ball(T,P,C): ATTENZIONE a indici e colori
+        // init_ball(T,P,C).
         int totalBalls = 0;
         for (int tIndex = 0; tIndex < numTubes; tIndex++) {
-            Tube tube = gameState.getTubes().get(tIndex);
-            List<Ball> balls = tube.getBalls();
-
-            // Assunzione: P=0 è il fondo e cresce verso la cima (coerente col debug).
-            // Se nel tuo modello l’array è "cima→fondo", usa: int pos = capacity - 1 - p;
+            var tube = gameState.getTubes().get(tIndex);
+            var balls = tube.getBalls();
             for (int p = 0; p < balls.size(); p++) {
-                Ball b = balls.get(p);
-                if (b == null || b.getColor() == null) continue; // salta spazi vuoti
-                String color = b.getColor().name().toLowerCase(); // RED -> "red"
+                var b = balls.get(p);
+                if (b == null || b.getColor() == null) continue;
+                String color = b.getColor().name().toLowerCase();
                 facts.addObjectInput(new BallFact(tIndex + 1, p, color));
                 totalBalls++;
             }
         }
         System.out.println("   init_ball totali: " + totalBalls);
-    }*/
-    public static String buildFacts(GameState gs, int horizon) {
-        String difficulty = gs.getLevel().getDisplayName();
-        System.out.println(difficulty);
-        if(difficulty.equals("Facile")){
-            horizon = 15;
-        }
-        else if(difficulty.equals("Medio")){
-            horizon = 25;
-        }
-        else if(difficulty.equals("Difficile")){
-            horizon = 45;
-        }
-
-        StringBuilder sb = new StringBuilder(1024);
-
-        // Parametri base
-        sb.append("capacity(").append(gs.getLevel().getTubeCapacity()).append(").\n");
-        sb.append("horizon(").append(horizon).append(").\n");
-
-        // Tubi
-        int nTubes = gs.getTubes().size();
-        for (int t = 1; t <= nTubes; t++) sb.append("tube(").append(t).append(").\n");
-
-        // Domini espliciti (safe e solver-friendly)
-        int cap = gs.getLevel().getTubeCapacity();
-        for (int p = 0; p < cap; p++) sb.append("pos(").append(p).append(").\n");
-        for (int s = 0; s <= horizon; s++) sb.append("step(").append(s).append(").\n");
-
-        // Stato iniziale
-        for (int t = 1; t <= nTubes; t++) {
-            Tube tube = gs.getTubes().get(t - 1);
-            List<Ball> balls = tube.getBalls();
-
-            if (balls == null) continue;                // nessuna pallina
-            int size = Math.min(balls.size(), tube.getCapacity()); // non superare la capacity
-
-            for (int p = 0; p < size; p++) {
-                Ball b = balls.get(p);
-                if (b == null || b.getColor() == null) continue;   // salta eventuali null
-
-                sb.append("init_ball(")
-                        .append(t).append(",")
-                        .append(p).append(",")
-                        .append(b.getColor().name().toLowerCase())
-                        .append(").\n");
-            }
-        }
-        return sb.toString();
     }
+
+    private int chooseHorizon(GameState gs) {
+        String diff = gs.getLevel().getDisplayName();
+        if ("Facile".equals(diff)) return 15;
+        if ("Medio".equals(diff)) return 25;
+        if ("Difficile".equals(diff)) return 45;
+        return 20; // fallback
+    }
+
+
+
+
+
 
 
     /**
      * Processa i risultati del solver ASP
      */
-    private static final Pattern MOVE_RE =
-            Pattern.compile("show_move\\s*\\(\\s*(\\d+)\\s*,\\s*(\\d+)\\s*,\\s*(\\d+)\\s*\\)");
-
-    private List<ShowMove> processResults(Output output) {
-        List<ShowMove> moves = new ArrayList<>();
-
-        AnswerSets answerSets = (AnswerSets) output;
-        Iterator var6 = answerSets.getAnswersets().iterator();
-
-        while(var6.hasNext()) {
-            AnswerSet a = (AnswerSet)var6.next();
-
-            try {
-                Iterator var8 = a.getAtoms().iterator();
-
-                while(var8.hasNext()) {
-                    Object obj = var8.next();
-                    if (obj instanceof ShowMove) {
-                        ShowMove move = (ShowMove) obj;
-                        moves.add(move);
-                        System.out.println(move.getFrom() + move.getTo() + move.getStep());
-                    }
-                }
-            } catch (Exception var12) {
-                Exception e = var12;
-                e.printStackTrace();
-            }
-        }
-
-
-        if (output == null) {
-            System.err.println("⚠️ Output nullo dal solver.");
-            return moves;
-        }
-
-       /* String raw = output.toString();
-        if (raw == null) raw = "";
-        System.out.println("===== RAW ASP OUTPUT =====\n" + raw + "\n==========================");
-
-        // Caso: DLV2 INCOHERENT / nessun answer set
-        if (raw.toUpperCase().contains("INCOHERENT")) {
-            System.out.println("ℹ️ Modello INCOERENTE: nessuna soluzione.");
-            return moves;
-        }
-
-        // Estrai tutti i show_move presenti nel testo (anche se ci sono warning o altro)
-        Matcher m = MOVE_RE.matcher(raw);
-        while (m.find()) {
-            int from = Integer.parseInt(m.group(1));
-            int to   = Integer.parseInt(m.group(2));
-            int step = Integer.parseInt(m.group(3));
-            moves.add(new ShowMove(from, to, step));
-        }
-
-        System.out.println("✅ Mosse parsate: " + moves.size());*/
-        return moves;
-    }
 
 
     /** Stampa di debug degli answer set, leggibili */
     /** Stampa di debug degli answer set, leggibili - VERSIONE CORRETTA */
+    // AspSolver.java (sostituisci il vecchio debugPrintAnswerSets)
     private static void debugPrintAnswerSets(Output out) {
         if (!(out instanceof AnswerSets)) {
-            System.out.println("⚠️ Output non è AnswerSets. toString(): " + out);
+            System.out.println("ℹ️ Output non è AnswerSets. Class: " + (out == null ? "null" : out.getClass().getName()));
             return;
         }
         AnswerSets as = (AnswerSets) out;
 
-        System.out.println("👉 Answer sets totali: " + as.getAnswersets().size());
+        List<AnswerSet> all = as.getAnswersets();
+        System.out.println("👉 Answer sets (tot): " + (all == null ? 0 : all.size()));
 
-        // CORREZIONE: Controlla se ci sono optimal answer sets prima di accedervi
         try {
-            List<AnswerSet> optimalSets = as.getOptimalAnswerSets();
-            if (optimalSets != null && !optimalSets.isEmpty()) {
-                System.out.println("👉 Optimal answer sets: " + optimalSets.size());
+            List<AnswerSet> optimal = as.getOptimalAnswerSets();
+            if (optimal != null && !optimal.isEmpty()) {
+                System.out.println("👉 Optimal answer sets: " + optimal.size());
             } else {
-                System.out.println("👉 Nessun optimal answer set (normale senza ottimizzazione)");
+                System.out.println("👉 Nessun optimal set (normale senza ottimizzazione).");
             }
         } catch (Exception e) {
-            System.out.println("👉 Errore accesso optimal sets (normale senza ottimizzazione): " + e.getMessage());
-        }
-
-        int idx = 0;
-        for (AnswerSet a : as.getAnswersets()) {
-            String val = String.valueOf(a.getValue());
-            System.out.println("AS[" + (idx++) + "]: " + val);
+            System.out.println("👉 Optimal non disponibile: " + e.getMessage());
         }
     }
 
-    /*private static List<ShowMove> extractOptimalMovesSorted(Output output) {
+
+
+
+    // AspSolver.java (sostituisci il vecchio extractOptimalMovesSorted)
+    private List<ShowMove> extractOptimalMovesSorted(Output output) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
         List<ShowMove> moves = new ArrayList<>();
-
-        if (!(output instanceof AnswerSets)) {
-            // fallback: tenta dal toString
-            String raw = String.valueOf(output);
-            Matcher m = MOVE_RE.matcher(raw);
-            while (m.find()) {
-                moves.add(new ShowMove(
-                        Integer.parseInt(m.group(1)),
-                        Integer.parseInt(m.group(2)),
-                        Integer.parseInt(m.group(3))));
-            }
-            moves.sort(Comparator.comparingInt(ShowMove::getStep));
-            return moves;
-        }
-
-        AnswerSets as = (AnswerSets) output;
-
-        // CORREZIONE: Gestione sicura degli optimal answer sets
-        List<AnswerSet> source = null;
-        try {
-            source = as.getOptimalAnswerSets();
-            if (source == null || source.isEmpty()) {
-                source = as.getAnswersets();
-            }
-        } catch (Exception e) {
-            // Se getOptimalAnswerSets() fallisce, usa tutti gli answer sets
-            System.out.println("⚠️ Fallback a tutti gli answer sets: " + e.getMessage());
-            source = as.getAnswersets();
-        }
-
-        if (source == null || source.isEmpty()) {
-            System.out.println("⚠️ Nessun answer set disponibile");
-            return moves;
-        }
-
-        // Prendi il PRIMO answer set nella lista scelta
-        AnswerSet best = source.get(0);
-        String val = String.valueOf(best.getValue());
-        if (val == null || val.isEmpty()) {
-            System.out.println("⚠️ Answer set vuoto");
-            return moves;
-        }
-
-        System.out.println("🔍 Parsing answer set: " + val);
-
-        Matcher m = MOVE_RE.matcher(val);
-        while (m.find()) {
-            int from = Integer.parseInt(m.group(1));
-            int to = Integer.parseInt(m.group(2));
-            int step = Integer.parseInt(m.group(3));
-            moves.add(new ShowMove(from, to, step));
-            System.out.println("   📝 Trovata mossa: " + from + " -> " + to + " (step " + step + ")");
-        }
-
-        // Ordina per step
-        moves.sort(Comparator.comparingInt(ShowMove::getStep));
-        System.out.println("✅ Mosse totali parsate e ordinate: " + moves.size());
-
-        return moves;
-    }*/
-
-    private List<ShowMove> extractOptimalMovesSorted(Output output) {
-        List<ShowMove> moves = new ArrayList<>();
-
-        if (!(output instanceof AnswerSets)) {
-            System.err.println("⚠️ Output non è di tipo AnswerSets");
-            return moves;
-        }
+        if (!(output instanceof AnswerSets)) return moves;
 
         AnswerSets answerSets = (AnswerSets) output;
 
-        // 1. Recupera prima gli optimal answer set (se disponibili)
+        // 1) Prova con gli optimal; se non ci sono, fallback a tutti gli answer set
         List<AnswerSet> source;
         try {
             source = answerSets.getOptimalAnswerSets();
             if (source == null || source.isEmpty()) {
-                System.out.println("ℹ️ Nessun optimal answer set, uso tutti gli answer set");
                 source = answerSets.getAnswersets();
             }
         } catch (Exception e) {
-            System.out.println("⚠️ Errore durante getOptimalAnswerSets(), fallback: " + e.getMessage());
             source = answerSets.getAnswersets();
         }
+        if (source == null || source.isEmpty()) return moves;
 
-        if (source == null || source.isEmpty()) {
-            System.out.println("⚠️ Nessun answer set disponibile");
-            return moves;
-        }
-
-        // 2. Prendi SOLO il primo answer set (il più ottimo)
+        // 2) In genere ti basta il PRIMO set (quello ottimo). Se vuoi, puoi unire più set.
         AnswerSet best = source.get(0);
-        System.out.println("🔍 Parsing del primo answer set ottimo...");
 
-        try {
-            for (Object atom : best.getAtoms()) {
-                if (atom instanceof ShowMove) {
-                    ShowMove move = (ShowMove) atom;
-                    moves.add(move);
-                    System.out.println("   📝 Mossa trovata: " +
-                            move.getFrom() + " -> " + move.getTo() +
-                            " (step " + move.getStep() + ")");
-                }
+        for (Object atom : best.getAtoms()) {
+            if (atom instanceof ShowMove) {
+                moves.add((ShowMove) atom);
             }
-        } catch (Exception e) {
-            System.err.println("❌ Errore parsing atoms: " + e.getMessage());
-            e.printStackTrace();
         }
 
-        // 3. Ordina le mosse per step
+        // 3) Ordina per step così la GUI può eseguirle in ordine
         moves.sort(Comparator.comparingInt(ShowMove::getStep));
-        System.out.println("✅ Mosse estratte e ordinate: " + moves.size());
-
         return moves;
     }
+
 
 
     /**
