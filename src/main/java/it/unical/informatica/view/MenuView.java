@@ -39,16 +39,14 @@ public class MenuView {
         mainContainer = new VBox();
         mainContainer.getStyleClass().add("menu-container");
         mainContainer.setAlignment(Pos.CENTER);
-        mainContainer.setSpacing(40);
-        mainContainer.setPadding(new Insets(50));
+        mainContainer.setSpacing(30);
+        mainContainer.setPadding(new Insets(30));
 
         // Sezioni del menu
         createTitle();
         createMenuButtons();
-        createProjectInfo();
-
         // Crea la scena con dimensioni moderne
-        scene = new Scene(mainContainer, 1000, 700);
+        scene = new Scene(mainContainer, 1000, 600);
         scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
     }
 
@@ -170,29 +168,6 @@ public class MenuView {
         return button;
     }
 
-    private void createProjectInfo() {
-        VBox infoSection = new VBox();
-        infoSection.setAlignment(Pos.CENTER);
-        infoSection.setSpacing(8);
-
-        Text universityInfo = new Text("Università della Calabria - Corso di Intelligenza Artificiale");
-        universityInfo.getStyleClass().add("menu-subtitle");
-        universityInfo.setFont(Font.font("System", FontWeight.NORMAL, 14));
-        universityInfo.setFill(Color.rgb(255, 255, 255, 0.8));
-
-        Text techInfo = new Text("Java + Answer Set Programming (ASP) + JavaFX");
-        techInfo.getStyleClass().add("menu-subtitle");
-        techInfo.setFont(Font.font("System", FontWeight.LIGHT, 12));
-        techInfo.setFill(Color.rgb(255, 255, 255, 0.7));
-
-        infoSection.getChildren().addAll(universityInfo, techInfo);
-
-        // Spacer per spingere le info in basso
-        Region spacer = new Region();
-        VBox.setVgrow(spacer, Priority.ALWAYS);
-
-        mainContainer.getChildren().addAll(spacer, infoSection);
-    }
 
     private void showDifficultySelection() {
         Dialog<GameLevel> dialog = new Dialog<>();
@@ -286,7 +261,6 @@ public class MenuView {
         return switch (level) {
             case EASY -> "Perfetto per iniziare e imparare le basi";
             case MEDIUM -> "Sfida equilibrata per giocatori esperti";
-            case HARD -> "Test estremo delle tue abilità strategiche";
         };
     }
 
@@ -308,8 +282,7 @@ public class MenuView {
             
             MODALITÀ:
             • Facile: 6 tubi, 4 colori
-            • Medio: 7 tubi, 5 colori  
-            • Difficile: 9 tubi, 7 colori
+            • Medio: 7 tubi, 5 colori
             
             VALUTAZIONE:
             Meno mosse usi, più stelle ottieni!

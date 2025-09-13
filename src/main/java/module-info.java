@@ -9,9 +9,14 @@ module bubbleSorting {
     requires com.fasterxml.jackson.databind;
     requires org.slf4j;
     requires java.net.http;
-    requires java.prefs;
     requires jdk.jfr;
     requires org.json;
+
+    requires org.kordamp.ikonli.core;
+    requires org.kordamp.ikonli.javafx;
+    requires org.kordamp.ikonli.fontawesome5;
+    requires java.desktop;
+    requires java.prefs;
 
     // Esportazioni “normali”
     exports it.unical.informatica;
@@ -22,6 +27,7 @@ module bubbleSorting {
 
 
     // Aperture per riflessione (FXML; EmbASP usa riflessione -> apri senza target)
+
     opens it.unical.informatica to javafx.fxml;
     opens it.unical.informatica.controller to javafx.fxml;
     opens it.unical.informatica.model to javafx.fxml;

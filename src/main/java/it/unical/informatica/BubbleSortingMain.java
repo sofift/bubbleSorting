@@ -12,8 +12,12 @@ public class BubbleSortingMain extends Application {
     @Override
     public void start(Stage primaryStage) {
         primaryStage.setTitle("Bubble Sorting Game - AI Project");
-        primaryStage.setResizable(false);
+        primaryStage.setResizable(true);
+        primaryStage.setWidth(1000);
+        primaryStage.setHeight(600);
 
+        primaryStage.setMinWidth(1000);
+        primaryStage.setMinHeight(600);
         // Inizializza il controller del menu
         MenuController menuController = new MenuController(primaryStage);
         menuController.showMenu();

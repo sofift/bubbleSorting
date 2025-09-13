@@ -86,8 +86,6 @@ public class GameState {
             createEmergencyEasyLevel();
         } else if (level == GameLevel.MEDIUM) {
             createEmergencyMediumLevel();
-        } else if (level == GameLevel.HARD) {
-            createEmergencyHardLevel();
         }
 
         System.out.println("✅ Configurazione di emergenza creata");

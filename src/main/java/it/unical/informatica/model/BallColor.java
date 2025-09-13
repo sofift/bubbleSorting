@@ -66,8 +66,6 @@ public enum BallColor {
                 return new BallColor[]{RED, BLUE, GREEN, YELLOW};
             case MEDIUM:
                 return new BallColor[]{RED, BLUE, GREEN, YELLOW, ORANGE};
-            case HARD:
-                return new BallColor[]{RED, BLUE, GREEN, YELLOW, ORANGE, PURPLE, PINK};
             default:
                 throw new IllegalArgumentException("Difficoltà non supportata: " + difficulty);
         }

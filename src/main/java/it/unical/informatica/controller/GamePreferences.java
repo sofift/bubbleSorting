@@ -140,9 +140,8 @@ public class GamePreferences {
      */
     private int getOptimalMoves(GameLevel level) {
         return switch (level) {
-            case EASY -> 20;
-            case MEDIUM -> 30;
-            case HARD -> 45;
+            case EASY -> 15;
+            case MEDIUM -> 25;
         };
     }
 

@@ -7,8 +7,7 @@ package it.unical.informatica.model;
  */
 public enum GameLevel {
     EASY("Facile", 6, 4, 2, 5),
-    MEDIUM("Medio", 7, 5, 2, 5),
-    HARD("Difficile", 9, 7, 2, 5);
+    MEDIUM("Medio", 7, 5, 2, 5);
 
     private final String displayName;
     private final int numberOfTubes;
@@ -104,8 +103,7 @@ public enum GameLevel {
     public GameLevel getNextLevel() {
         switch (this) {
             case EASY: return MEDIUM;
-            case MEDIUM: return HARD;
-            case HARD: return null; // Nessun livello successivo
+            case MEDIUM: return null;
             default: return null;
         }
     }
@@ -117,7 +115,6 @@ public enum GameLevel {
     public GameLevel getPreviousLevel() {
         switch (this) {
             case MEDIUM: return EASY;
-            case HARD: return MEDIUM;
             case EASY: return null; // Nessun livello precedente
             default: return null;
         }

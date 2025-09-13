@@ -30,12 +30,12 @@ import java.util.function.Consumer;
 public class GameView {
 
     // ===== CONFIGURAZIONE =====
-    private static final double TUBE_WIDTH = 80;
-    private static final double TUBE_HEIGHT = 200;
+    private static final double TUBE_WIDTH = 70;
+    private static final double TUBE_HEIGHT = 150;
     private static final double BALL_RADIUS = 15;
     private static final double TUBE_SPACING = 20;
     private static final double ANIMATION_DURATION = 300; // millisecondi
-    private static final double AUTO_SOLVE_DELAY = 800; // Pausa tra le mosse nella risoluzione automatica
+    private static final double AUTO_SOLVE_DELAY = 700; // Pausa tra le mosse nella risoluzione automatica
 
     // ===== COMPONENTI CORE =====
     private final GameLevel gameLevel;
@@ -125,6 +125,8 @@ public class GameView {
      */
     private void createMainLayout() {
         mainContainer = new VBox();
+        mainContainer.setPrefHeight(Region.USE_COMPUTED_SIZE);
+        mainContainer.setPrefWidth(Region.USE_COMPUTED_SIZE);
         mainContainer.getStyleClass().add("game-container");
         mainContainer.setSpacing(20);
         mainContainer.setPadding(new Insets(20));
@@ -140,6 +142,11 @@ public class GameView {
         gameArea.setSpacing(TUBE_SPACING);
         gameArea.setAlignment(Pos.CENTER);
         gameArea.setPadding(new Insets(20));
+        gameArea.setFillHeight(false);
+        gameArea.setPrefWidth(Region.USE_COMPUTED_SIZE);
+        gameArea.setMinWidth(Region.USE_COMPUTED_SIZE);
+        gameArea.setMaxWidth(Region.USE_PREF_SIZE);
+
 
         // Crea i tubi vuoti inizialmente
         for (int i = 0; i < gameLevel.getNumberOfTubes(); i++) {
