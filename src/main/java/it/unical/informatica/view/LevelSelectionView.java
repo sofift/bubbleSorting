@@ -282,16 +282,13 @@ public class LevelSelectionView {
         levelText.getStyleClass().add("level-number");
         levelText.setStyle("-fx-font-size: 36px; -fx-font-weight: bold;");
 
-        // Icona di stato posizionata sotto il numero
-
         if (!isUnlocked) {
             Text statusIcon = new Text();
             topSection.getChildren().addAll(levelText, statusIcon);
             statusIcon.setText("🔒");
             statusIcon.setStyle("-fx-font-size: 24px;");
-        }else{
+        } else {
             topSection.getChildren().addAll(levelText);
-
         }
 
 
@@ -306,7 +303,7 @@ public class LevelSelectionView {
             int stars = preferences.getStars(currentDifficulty, levelNumber);
             for (int i = 0; i < 3; i++) {
                 Text star = new Text("⭐");
-                star.setStyle("-fx-font-size: 13px;");
+                star.setStyle("-fx-font-size: 16px;");
                 if (i < stars) {
                     star.getStyleClass().add("star");
                 } else {
@@ -318,7 +315,7 @@ public class LevelSelectionView {
         } else {
             // Placeholder per mantenere l'altezza uniforme
             Region spacer = new Region();
-            spacer.setPrefHeight(15);
+            spacer.setPrefHeight(20);
             starsSection.getChildren().add(spacer);
         }
 
@@ -336,7 +333,7 @@ public class LevelSelectionView {
 
             // Punteggio
             Text bestScore = new Text(String.valueOf(bestMoves));
-            bestScore.setStyle("-fx-font-size: 15px; -fx-font-weight: bold; -fx-fill: #2E86C1;");
+            bestScore.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-fill: #2E86C1;");
 
             bottomSection.getChildren().addAll(bestLabel, bestScore);
         } else if (!isUnlocked) {
@@ -491,8 +488,27 @@ public class LevelSelectionView {
      * Ricrea la scena dopo modifiche
      */
     private void recreateScene() {
+        // Salva i riferimenti dei listener prima di ricreare
         mainContainer.getChildren().clear();
-        createLevelSelectionScene();
+
+        // Resetta i riferimenti degli elementi
+        mainTitle = null;
+        difficultyTitle = null;
+        difficultySelectionTitle = null;
+        levelSelectionTitle = null;
+        progressTitle = null;
+        progressText = null;
+
+        // Ricrea tutti i componenti
+        createHeader();
+        createDifficultySelector();
+        createLevelGrid();
+        createProgressSection();
+        createControlButtons();
+
+        // Riapplica il responsive design
+        updateLayoutForWidth(scene.getWidth());
+        updateLayoutForHeight(scene.getHeight());
     }
 
     // Getters e Setters per gli event handlers

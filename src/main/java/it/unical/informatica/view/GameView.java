@@ -34,8 +34,8 @@ public class GameView {
     private static final double TUBE_HEIGHT = 150;
     private static final double BALL_RADIUS = 15;
     private static final double TUBE_SPACING = 20;
-    private static final double ANIMATION_DURATION = 300; // millisecondi
-    private static final double AUTO_SOLVE_DELAY = 700; // Pausa tra le mosse nella risoluzione automatica
+    private static final double ANIMATION_DURATION = 200; // millisecondi
+    private static final double AUTO_SOLVE_DELAY = 500; // Pausa tra le mosse nella risoluzione automatica
 
     // ===== COMPONENTI CORE =====
     private final GameLevel gameLevel;

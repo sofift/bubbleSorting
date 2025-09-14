@@ -150,17 +150,4 @@ public class LevelSelectionController {
     }
 
 
-    public boolean isLevelCompleted(int levelNumber) {
-        return false; // TODO: Implementare con GamePreferences
-    }
-
-
-    public int getLevelStars(int levelNumber) {
-        return 0; // TODO: Implementare sistema stelle
-    }
-
-
-    public boolean isLevelUnlocked(int levelNumber) {
-        return true; // TODO: Implementare logica sblocco
-    }
 }
