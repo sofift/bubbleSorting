@@ -18,9 +18,18 @@ import it.unical.informatica.controller.GamePreferences;
 public class LevelSelectionView {
 
     private Scene scene;
+    private ScrollPane scrollPane;
     private VBox mainContainer;
     private final GameLevel currentDifficulty;
     private final GamePreferences preferences;
+
+    // Riferimenti agli elementi per il ridimensionamento
+    private Text mainTitle;
+    private Text difficultyTitle;
+    private Text difficultySelectionTitle;
+    private Text levelSelectionTitle;
+    private Text progressTitle;
+    private Text progressText;
 
     // Event handlers
     private GameEventHandler.LevelSelectionHandler onLevelSelected;
@@ -39,8 +48,8 @@ public class LevelSelectionView {
     private void createLevelSelectionScene() {
         mainContainer = new VBox();
         mainContainer.getStyleClass().add("level-container");
-        mainContainer.setSpacing(30);
-        mainContainer.setPadding(new Insets(30));
+        mainContainer.setSpacing(20);
+        mainContainer.setPadding(new Insets(15));
 
         // Header con titolo e controlli
         createHeader();
@@ -57,31 +66,110 @@ public class LevelSelectionView {
         // Pulsanti di controllo
         createControlButtons();
 
+        // Wrappa tutto in uno ScrollPane
+        scrollPane = new ScrollPane(mainContainer);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(true);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.getStyleClass().add("scroll-pane");
+
         // Crea la scena
-        scene = new Scene(mainContainer, 900, 700);
+        scene = new Scene(scrollPane, 600, 500);
         scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
+
+        // Aggiungi listener per il ridimensionamento
+        addResponsiveListeners();
+    }
+
+    /**
+     * Aggiunge listener per rendere il layout responsive
+     */
+    private void addResponsiveListeners() {
+        scene.widthProperty().addListener((obs, oldVal, newVal) -> {
+            double width = newVal.doubleValue();
+            updateLayoutForWidth(width);
+        });
+
+        scene.heightProperty().addListener((obs, oldVal, newVal) -> {
+            double height = newVal.doubleValue();
+            updateLayoutForHeight(height);
+        });
+
+        // Imposta le dimensioni iniziali
+        updateLayoutForWidth(scene.getWidth());
+        updateLayoutForHeight(scene.getHeight());
+    }
+
+    /**
+     * Aggiorna il layout in base alla larghezza
+     */
+    private void updateLayoutForWidth(double width) {
+        // Aggiusta il padding in base alla larghezza
+        double padding = Math.max(10, Math.min(30, width * 0.03));
+        mainContainer.setPadding(new Insets(padding));
+
+        // Aggiorna le dimensioni dei font
+        updateFontSizes(width);
+    }
+
+    /**
+     * Aggiorna il layout in base all'altezza
+     */
+    private void updateLayoutForHeight(double height) {
+        // Aggiusta lo spacing in base all'altezza
+        double spacing = Math.max(10, Math.min(25, height * 0.035));
+        mainContainer.setSpacing(spacing);
+    }
+
+    /**
+     * Aggiorna le dimensioni dei font in base alla larghezza
+     */
+    private void updateFontSizes(double width) {
+        // Calcola le dimensioni dei font responsive
+        double titleSize = Math.max(24, Math.min(32, width * 0.04));
+        double subtitleSize = Math.max(18, Math.min(24, width * 0.035));
+        double normalSize = Math.max(14, Math.min(18, width * 0.025));
+        double smallSize = Math.max(12, Math.min(16, width * 0.02));
+        double tinySize = Math.max(10, Math.min(14, width * 0.015));
+
+        // Applica i font ai titoli principali
+        if (mainTitle != null) {
+            mainTitle.setStyle("-fx-font-size: " + titleSize + "px;");
+        }
+        if (difficultyTitle != null) {
+            difficultyTitle.setStyle("-fx-fill: #FF5722; -fx-font-size: " + subtitleSize + "px;");
+        }
+        if (difficultySelectionTitle != null) {
+            difficultySelectionTitle.setStyle("-fx-font-weight: bold; -fx-fill: #1976D2; -fx-font-size: " + smallSize + "px;");
+        }
+        if (levelSelectionTitle != null) {
+            levelSelectionTitle.setStyle("-fx-font-weight: bold; -fx-fill: #1976D2; -fx-font-size: " + normalSize + "px;");
+        }
+        if (progressTitle != null) {
+            progressTitle.setStyle("-fx-font-weight: bold; -fx-fill: #1976D2; -fx-font-size: " + smallSize + "px;");
+        }
+        if (progressText != null) {
+            progressText.setStyle("-fx-fill: #666666; -fx-font-size: " + tinySize + "px;");
+        }
     }
 
     /**
      * Crea l'header con titolo
      */
     private void createHeader() {
-        HBox header = new HBox();
-        header.setAlignment(Pos.CENTER_LEFT);
-        header.setSpacing(20);
+        VBox headerContainer = new VBox();
+        headerContainer.setAlignment(Pos.CENTER);
+        headerContainer.setSpacing(10);
 
-        Text title = new Text("Selezione Livello");
-        title.getStyleClass().add("level-title");
+        mainTitle = new Text("Selezione Livello");
+        mainTitle.getStyleClass().add("level-title");
 
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
+        difficultyTitle = new Text(currentDifficulty.getDisplayName());
+        difficultyTitle.getStyleClass().add("level-title");
 
-        Text difficultyText = new Text(currentDifficulty.getDisplayName());
-        difficultyText.getStyleClass().add("level-title");
-        difficultyText.setStyle("-fx-fill: #FF5722; -fx-font-size: 24px;");
-
-        header.getChildren().addAll(title, spacer, difficultyText);
-        mainContainer.getChildren().add(header);
+        headerContainer.getChildren().addAll(mainTitle, difficultyTitle);
+        mainContainer.getChildren().add(headerContainer);
     }
 
     /**
@@ -89,13 +177,13 @@ public class LevelSelectionView {
      */
     private void createDifficultySelector() {
         VBox difficultySection = new VBox();
-        difficultySection.setSpacing(15);
+        difficultySection.setSpacing(10);
 
-        Text sectionTitle = new Text("Cambia Difficoltà:");
-        sectionTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-fill: #1976D2;");
+        difficultySelectionTitle = new Text("Cambia Difficoltà:");
 
-        HBox difficultyButtons = new HBox();
-        difficultyButtons.setSpacing(15);
+        FlowPane difficultyButtons = new FlowPane();
+        difficultyButtons.setHgap(10);
+        difficultyButtons.setVgap(10);
         difficultyButtons.setAlignment(Pos.CENTER);
 
         for (GameLevel level : GameLevel.values()) {
@@ -103,7 +191,7 @@ public class LevelSelectionView {
             difficultyButtons.getChildren().add(diffButton);
         }
 
-        difficultySection.getChildren().addAll(sectionTitle, difficultyButtons);
+        difficultySection.getChildren().addAll(difficultySelectionTitle, difficultyButtons);
         mainContainer.getChildren().add(difficultySection);
     }
 
@@ -113,6 +201,8 @@ public class LevelSelectionView {
     private Button createDifficultyButton(GameLevel level) {
         Button button = new Button(level.getDisplayName());
         button.getStyleClass().add("control-button");
+        button.setPrefWidth(120);
+        button.setPrefHeight(60);
 
         if (level == currentDifficulty) {
             button.setStyle("-fx-background-color: #FF5722; -fx-border-color: #D84315; -fx-border-width: 2px;");
@@ -137,24 +227,23 @@ public class LevelSelectionView {
      */
     private void createLevelGrid() {
         VBox gridSection = new VBox();
-        gridSection.setSpacing(20);
+        gridSection.setSpacing(15);
 
-        Text sectionTitle = new Text("Seleziona Livello:");
-        sectionTitle.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-fill: #1976D2;");
+        levelSelectionTitle = new Text("Seleziona Livello:");
 
-        GridPane levelGrid = new GridPane();
+        FlowPane levelGrid = new FlowPane();
         levelGrid.setAlignment(Pos.CENTER);
-        levelGrid.setHgap(20);
-        levelGrid.setVgap(20);
-        levelGrid.setPadding(new Insets(20));
+        levelGrid.setHgap(15);
+        levelGrid.setVgap(15);
+        levelGrid.setPadding(new Insets(10));
 
         // Crea le card per ogni livello
         for (int level = 1; level <= 5; level++) {
             VBox levelCard = createLevelCard(level);
-            levelGrid.add(levelCard, (level - 1) % 5, (level - 1) / 5);
+            levelGrid.getChildren().add(levelCard);
         }
 
-        gridSection.getChildren().addAll(sectionTitle, levelGrid);
+        gridSection.getChildren().addAll(levelSelectionTitle, levelGrid);
         mainContainer.getChildren().add(gridSection);
     }
 
@@ -164,8 +253,12 @@ public class LevelSelectionView {
     private VBox createLevelCard(int levelNumber) {
         VBox card = new VBox();
         card.setAlignment(Pos.CENTER);
-        card.setSpacing(10);
-        card.setPrefSize(150, 150);
+        card.setSpacing(5);
+
+        // Dimensioni più grandi e proporzionate
+        card.setPrefSize(140, 160);
+        card.setMinSize(120, 140);
+        card.setMaxSize(160, 180);
 
         boolean isCompleted = preferences.isLevelCompleted(currentDifficulty, levelNumber);
         boolean isUnlocked = preferences.isLevelUnlocked(currentDifficulty, levelNumber);
@@ -179,45 +272,85 @@ public class LevelSelectionView {
             card.getStyleClass().add("level-card");
         }
 
-        // Numero del livello
+        // Container per numero e icona nella parte superiore
+        VBox topSection = new VBox();
+        topSection.setAlignment(Pos.CENTER);
+        topSection.setSpacing(8);
+
+        // Numero del livello più grande e ben visibile
         Text levelText = new Text(String.valueOf(levelNumber));
         levelText.getStyleClass().add("level-number");
+        levelText.setStyle("-fx-font-size: 36px; -fx-font-weight: bold;");
 
-        // Icona di stato
-        Text statusIcon = new Text();
+        // Icona di stato posizionata sotto il numero
+
         if (!isUnlocked) {
+            Text statusIcon = new Text();
+            topSection.getChildren().addAll(levelText, statusIcon);
             statusIcon.setText("🔒");
             statusIcon.setStyle("-fx-font-size: 24px;");
-        } else if (isCompleted) {
-            statusIcon.setText("✅");
-            statusIcon.setStyle("-fx-font-size: 24px;");
-        } else {
-            statusIcon.setText("▶️");
-            statusIcon.setStyle("-fx-font-size: 24px;");
+        }else{
+            topSection.getChildren().addAll(levelText);
+
         }
 
-        // Stelle (se completato)
-        HBox starsBox = new HBox();
-        starsBox.setAlignment(Pos.CENTER);
-        starsBox.setSpacing(3);
-        starsBox.getStyleClass().add("level-stars");
+
+
+        // Sezione centrale per le stelle (solo se completato)
+        HBox starsSection = new HBox();
+        starsSection.setAlignment(Pos.CENTER);
+        starsSection.setSpacing(3);
+        starsSection.setPadding(new Insets(5, 0, 5, 0));
 
         if (isCompleted) {
             int stars = preferences.getStars(currentDifficulty, levelNumber);
             for (int i = 0; i < 3; i++) {
                 Text star = new Text("⭐");
-                star.getStyleClass().add(i < stars ? "star" : "star empty");
-                starsBox.getChildren().add(star);
+                star.setStyle("-fx-font-size: 13px;");
+                if (i < stars) {
+                    star.getStyleClass().add("star");
+                } else {
+                    star.getStyleClass().add("star");
+                    star.setStyle(star.getStyle() + "-fx-opacity: 0.3;");
+                }
+                starsSection.getChildren().add(star);
             }
-
-            // Mostra il miglior punteggio
-            int bestMoves = preferences.getBestMoves(currentDifficulty, levelNumber);
-            Text bestScore = new Text("Best: " + bestMoves + " mosse");
-            bestScore.setStyle("-fx-font-size: 10px; -fx-fill: #666666;");
-            card.getChildren().add(bestScore);
+        } else {
+            // Placeholder per mantenere l'altezza uniforme
+            Region spacer = new Region();
+            spacer.setPrefHeight(15);
+            starsSection.getChildren().add(spacer);
         }
 
-        card.getChildren().addAll(levelText, statusIcon, starsBox);
+        // Sezione inferiore per il punteggio
+        VBox bottomSection = new VBox();
+        bottomSection.setAlignment(Pos.CENTER);
+        bottomSection.setSpacing(2);
+
+        if (isCompleted) {
+            int bestMoves = preferences.getBestMoves(currentDifficulty, levelNumber);
+
+            // Etichetta "BEST"
+            Text bestLabel = new Text("BEST");
+            bestLabel.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-fill: #7B8A8B;");
+
+            // Punteggio
+            Text bestScore = new Text(String.valueOf(bestMoves));
+            bestScore.setStyle("-fx-font-size: 15px; -fx-font-weight: bold; -fx-fill: #2E86C1;");
+
+            bottomSection.getChildren().addAll(bestLabel, bestScore);
+        } else if (!isUnlocked) {
+            Text lockedText = new Text("BLOCCATO");
+            lockedText.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-fill: #7B8A8B; -fx-opacity: 0.7;");
+            bottomSection.getChildren().add(lockedText);
+        } else {
+            Text playText = new Text("GIOCA");
+            playText.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-fill: #2E86C1;");
+            bottomSection.getChildren().add(playText);
+        }
+
+        // Assembla tutti i componenti
+        card.getChildren().addAll(topSection, starsSection, bottomSection);
 
         // Event handler per il click
         if (isUnlocked) {
@@ -225,6 +358,15 @@ public class LevelSelectionView {
                 if (onLevelSelected != null) {
                     onLevelSelected.onLevelSelected(currentDifficulty, levelNumber);
                 }
+            });
+
+            // Effetto hover
+            card.setOnMouseEntered(e -> {
+                card.setStyle(card.getStyle() + "-fx-scale-x: 1.05; -fx-scale-y: 1.05;");
+            });
+
+            card.setOnMouseExited(e -> {
+                card.setStyle(card.getStyle().replace("-fx-scale-x: 1.05; -fx-scale-y: 1.05;", ""));
             });
 
             // Tooltip con informazioni
@@ -253,24 +395,22 @@ public class LevelSelectionView {
      */
     private void createProgressSection() {
         VBox progressSection = new VBox();
-        progressSection.setSpacing(10);
-        progressSection.setPadding(new Insets(20));
+        progressSection.setSpacing(8);
+        progressSection.setPadding(new Insets(15));
         progressSection.setStyle("-fx-background-color: rgba(255, 255, 255, 0.8); -fx-background-radius: 10px;");
 
-        Text progressTitle = new Text("Progresso " + currentDifficulty.getDisplayName());
-        progressTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-fill: #1976D2;");
+        progressTitle = new Text("Progresso " + currentDifficulty.getDisplayName());
 
         ProgressBar progressBar = new ProgressBar();
         progressBar.getStyleClass().add("progress-bar");
-        progressBar.setPrefWidth(400);
-        progressBar.setPrefHeight(20);
+        progressBar.setPrefHeight(15);
+        progressBar.setMaxWidth(Double.MAX_VALUE);
 
         double progress = preferences.getProgressForDifficulty(currentDifficulty) / 100.0;
         progressBar.setProgress(progress);
 
-        Text progressText = new Text(String.format("%.0f%% completato (%d/5 livelli)",
+        progressText = new Text(String.format("%.0f%% completato (%d/5 livelli)",
                 progress * 100, countCompletedLevels()));
-        progressText.setStyle("-fx-font-size: 14px; -fx-fill: #666666;");
 
         progressSection.getChildren().addAll(progressTitle, progressBar, progressText);
         mainContainer.getChildren().add(progressSection);
@@ -293,13 +433,15 @@ public class LevelSelectionView {
      * Crea i pulsanti di controllo
      */
     private void createControlButtons() {
-        HBox controlBox = new HBox();
+        FlowPane controlBox = new FlowPane();
         controlBox.setAlignment(Pos.CENTER);
-        controlBox.setSpacing(20);
-        controlBox.setPadding(new Insets(20, 0, 0, 0));
+        controlBox.setHgap(15);
+        controlBox.setVgap(10);
+        controlBox.setPadding(new Insets(15, 0, 0, 0));
 
         Button backButton = new Button("🔙 Torna al Menu");
         backButton.getStyleClass().addAll("control-button", "secondary-button");
+        backButton.setPrefWidth(140);
         backButton.setOnAction(e -> {
             if (onBackToMenu != null) {
                 try {
@@ -314,6 +456,7 @@ public class LevelSelectionView {
 
         Button resetButton = new Button("🔄 Reset Progresso");
         resetButton.getStyleClass().addAll("control-button", "danger-button");
+        resetButton.setPrefWidth(140);
         resetButton.setOnAction(e -> showResetConfirmation());
 
         controlBox.getChildren().addAll(backButton, resetButton);

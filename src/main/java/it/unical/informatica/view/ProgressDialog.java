@@ -10,9 +10,7 @@ import javafx.stage.StageStyle;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 
-/**
- * Dialog per mostrare il progresso di operazioni lunghe
- */
+
 public class ProgressDialog {
 
     private Stage stage;
