@@ -417,3 +417,99 @@
 .success  { -fx-background-color: rgba(39, 174, 96, 0.18); -fx-border-color: #27AE60; -fx-border-width: 1; -fx-border-radius: 12; }
 .warning  { -fx-background-color: rgba(243, 156, 18, 0.18); -fx-border-color: #F39C12; -fx-border-width: 1; -fx-border-radius: 12; }
 .error    { -fx-background-color: rgba(231, 76, 60, 0.18); -fx-border-color: #E74C3C; -fx-border-width: 1; -fx-border-radius: 12; }
+/* ================================
+   STATUS PANEL - INFORMAZIONI DI GIOCO
+   ================================ */
+
+.status-panel {
+    -fx-background-color: rgba(255, 255, 255, 0.15);
+    -fx-background-radius: 15;
+    -fx-border-color: rgba(255, 255, 255, 0.2);
+    -fx-border-width: 1;
+    -fx-border-radius: 15;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 8, 0, 0, 2);
+    -fx-padding: 15 25;
+    -fx-spacing: 12;
+    -fx-alignment: center;
+    -fx-max-width: 500px;
+}
+
+/* Informazioni livello (es. "Facile") */
+.level-info {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-fill: #5DADE2;
+    -fx-text-alignment: center;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 3, 0, 0, 1);
+}
+
+/* Messaggi di stato del gioco */
+.message-text {
+    -fx-font-size: 14px;
+    -fx-font-weight: normal;
+    -fx-fill: #D6EAF8;
+    -fx-text-alignment: center;
+    -fx-wrap-text: true;
+    -fx-line-spacing: 2;
+}
+
+/* Stato specifico per risoluzione automatica */
+.message-text.auto-solving {
+    -fx-fill: #F39C12;
+    -fx-font-weight: bold;
+    -fx-effect: dropshadow(gaussian, rgba(243, 156, 18, 0.4), 4, 0, 0, 1);
+}
+
+/* Messaggi di successo */
+.message-text.success {
+    -fx-fill: #27AE60;
+    -fx-font-weight: bold;
+    -fx-effect: dropshadow(gaussian, rgba(39, 174, 96, 0.4), 4, 0, 0, 1);
+}
+
+/* Messaggi di errore */
+.message-text.error {
+    -fx-fill: #E74C3C;
+    -fx-font-weight: bold;
+    -fx-effect: dropshadow(gaussian, rgba(231, 76, 60, 0.4), 4, 0, 0, 1);
+}
+
+/* Messaggi di informazione */
+.message-text.info {
+    -fx-fill: #3498DB;
+    -fx-font-style: italic;
+}
+
+/* Animazione pulsante per messaggi importanti */
+.message-text.pulsing {
+    -fx-effect: dropshadow(gaussian, rgba(93, 173, 226, 0.6), 6, 0, 0, 0);
+}
+
+/* Statistiche di gioco */
+.stat-text {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-fill: #D6EAF8;
+    -fx-text-alignment: center;
+}
+
+.stat-text:hover {
+    -fx-fill: #5DADE2;
+}
+
+
+/* Per schermi più piccoli - responsive */
+@media screen and (max-width: 800px) {
+    .status-panel {
+        -fx-max-width: 400px;
+        -fx-padding: 12 20;
+    }
+
+    .level-info {
+        -fx-font-size: 16px;
+    }
+
+    .message-text {
+        -fx-font-size: 12px;
+    }
+}

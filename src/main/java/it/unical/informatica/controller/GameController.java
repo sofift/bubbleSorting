@@ -382,7 +382,6 @@ public class GameController {
                         primaryStage, menuController, gameLevel, levelNumber + 1);
                 nextController.startGame();
             } else {
-                // Ultimo livello della difficoltà
                 GameLevel nextDifficulty = gameLevel.getNextLevel();
                 if (nextDifficulty != null) {
                     GameController nextController = new GameController(
@@ -426,7 +425,6 @@ public class GameController {
                         throw new Exception("AspSolver non disponibile");
                     }
 
-                    // Utilizza il metodo solve del solver ASP
                     return aspSolver.solve(gameState);
                 }
             };

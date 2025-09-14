@@ -15,8 +15,7 @@ public class ShowMove {
     @Param(2)
     private int step;
 
-    public ShowMove() {} // obbligatorio
-
+    public ShowMove() {}
     public ShowMove(int from, int to, int step) {
         this.from = from;
         this.to = to;

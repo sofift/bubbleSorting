@@ -223,7 +223,7 @@ public class GameView {
         messageText.getStyleClass().add("message-text");
         messageText.setWrappingWidth(400);
 
-        statusPanel.getChildren().addAll(levelInfo, statsBox, messageText);
+        statusPanel.getChildren().addAll(levelInfo, messageText);
         mainContainer.getChildren().add(statusPanel);
     }
 
@@ -387,7 +387,7 @@ public class GameView {
      */
     public void handleTubeSelection(int tubeId, GameState gameState) {
         if (isAutoSolving) {
-            showMessage("Risoluzione automatica in corso...");
+            showMessage("Risoluzione automatica in corso...", "auto-solving");
             return;
         }
 
@@ -415,8 +415,7 @@ public class GameView {
 
         selectedTubeId = tubeId;
         tubeViews.get(tubeId).setSelected(true);
-        showMessage("Tubo " + (tubeId + 1) + " selezionato. Clicca su un altro tubo per spostare.");
-
+        showMessage("Tubo " + (tubeId + 1) + " selezionato. Clicca su un altro tubo per spostare.", "info");
         // Evidenzia i tubi validi per la mossa
         highlightValidMoves(tubeId, gameState);
     }
@@ -442,14 +441,13 @@ public class GameView {
         Tube toTube = gameState.getTube(toTubeId);
 
         if (fromTube == null || toTube == null || fromTube.isEmpty()) {
-            showMessage("Mossa non valida!");
-            deselectTube();
+            showMessage("Mossa non valida!", "error");deselectTube();
             return;
         }
 
         Ball ballToMove = fromTube.getTopBall();
         if (!toTube.canAddBall(ballToMove)) {
-            showMessage("Impossibile spostare la pallina qui!");
+            showMessage("Impossibile spostare la pallina qui!", "error");
             deselectTube();
             return;
         }
@@ -594,12 +592,12 @@ public class GameView {
      */
     public void startAutoSolve(List<ShowMove> solution) {
         if (solution == null || solution.isEmpty()) {
-            showMessage("Nessuna soluzione trovata!");
+            showMessage("Nessuna soluzione trovata!", "error");
             return;
         }
 
         if (isAutoSolving) {
-            showMessage("Risoluzione automatica già in corso...");
+            showMessage("Risoluzione automatica già in corso...", "auto-solving");
             return;
         }
 
@@ -613,7 +611,7 @@ public class GameView {
         disableUserInteraction();
 
         // Mostra messaggio informativo
-        showMessage("🤖 Risoluzione automatica in corso... Mossa 1/" + solution.size());
+        showMessage("🤖 Risoluzione automatica in corso... Mossa 1/" + solution.size(), "auto-solving");
 
         // Avvia l'esecuzione delle mosse
         executeNextSolutionMove();
@@ -650,8 +648,8 @@ public class GameView {
 
         // Aggiorna il messaggio
         if (currentSolutionStep < solutionMoves.size()) {
-            showMessage("🤖 Risoluzione automatica in corso... Mossa " +
-                    (currentSolutionStep + 1) + "/" + solutionMoves.size());
+            showMessage("Risoluzione automatica in corso... Mossa " +
+                    (currentSolutionStep + 1) + "/" + solutionMoves.size(), "auto-solving");
         }
 
         // Programma la prossima mossa dopo un delay
@@ -731,7 +729,7 @@ public class GameView {
         // Aggiorna i pulsanti
         updateButtonStates(currentGameState);
 
-        showMessage("Risoluzione automatica interrotta");
+        showMessage("Risoluzione automatica interrotta", "info");
     }
 
     /**
@@ -754,7 +752,7 @@ public class GameView {
         // Aggiorna i pulsanti
         updateButtonStates(currentGameState);
 
-        showMessage("🎉 Puzzle risolto automaticamente!");
+        showMessage("🎉 Puzzle risolto automaticamente!", "success");
 
         // Mostra animazione di vittoria se il gioco è completato
         if (currentGameState != null && currentGameState.isGameWon()) {
@@ -889,17 +887,26 @@ public class GameView {
     /**
      * Mostra un messaggio all'utente
      */
-    public void showMessage(String message) {
+    public void showMessage(String message, String messageType) {
         Platform.runLater(() -> {
             if (messageText != null) {
+                // Rimuovi tutte le classi di stile precedenti
+                messageText.getStyleClass().removeAll("auto-solving", "success", "error", "info", "pulsing");
+
                 messageText.setText(message);
 
-                // Fade out automatico dopo 3 secondi
-                if (!message.isEmpty()) {
+                // Applica lo stile specifico
+                if (messageType != null && !messageType.isEmpty()) {
+                    messageText.getStyleClass().add(messageType);
+                }
+
+                // Fade out automatico dopo 5 secondi per messaggi normali
+                if (!message.isEmpty() && !"auto-solving".equals(messageType)) {
                     Timeline fadeOut = new Timeline(
-                            new KeyFrame(Duration.seconds(3), e -> {
+                            new KeyFrame(Duration.seconds(5), e -> {
                                 if (messageText.getText().equals(message)) {
                                     messageText.setText("");
+                                    messageText.getStyleClass().removeAll("auto-solving", "success", "error", "info", "pulsing");
                                 }
                             })
                     );
@@ -909,6 +916,9 @@ public class GameView {
         });
     }
 
+    public void showMessage(String message) {
+        showMessage(message, null);
+    }
     /**
      * Mostra il dialogo di vittoria
      */

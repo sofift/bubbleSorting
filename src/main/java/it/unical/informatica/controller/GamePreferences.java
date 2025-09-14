@@ -22,7 +22,6 @@ public class GamePreferences {
     private final Preferences preferences;
     private static GamePreferences instance;
 
-    // Cache per migliorare le prestazioni
     private final Map<String, Boolean> completionCache;
     private final Map<String, Integer> movesCache;
     private final Map<String, Integer> starsCache;
@@ -36,9 +35,7 @@ public class GamePreferences {
         loadCache();
     }
 
-    /**
-     * Ottiene l'istanza singleton
-     */
+
     public static GamePreferences getInstance() {
         if (instance == null) {
             instance = new GamePreferences();
@@ -46,9 +43,6 @@ public class GamePreferences {
         return instance;
     }
 
-    /**
-     * Carica i dati nella cache
-     */
     private void loadCache() {
         for (GameLevel level : GameLevel.values()) {
             for (int levelNumber = 1; levelNumber <= 5; levelNumber++) {
@@ -64,20 +58,13 @@ public class GamePreferences {
         }
     }
 
-    /**
-     * Genera una chiave unica per un livello
-     */
     private String getLevelKey(GameLevel level, int levelNumber) {
         return level.name().toLowerCase() + "_" + levelNumber;
     }
 
-    /**
-     * Segna un livello come completato
-     */
     public void setLevelCompleted(GameLevel level, int levelNumber, int moves) {
         String key = getLevelKey(level, levelNumber);
 
-        // Aggiorna solo se è un miglioramento
         int currentBestMoves = getBestMoves(level, levelNumber);
         if (moves < currentBestMoves) {
             completionCache.put(key, true);
@@ -94,45 +81,36 @@ public class GamePreferences {
         }
     }
 
-    /**
-     * Verifica se un livello è stato completato
-     */
+
     public boolean isLevelCompleted(GameLevel level, int levelNumber) {
         String key = getLevelKey(level, levelNumber);
         return completionCache.getOrDefault(key, false);
     }
 
-    /**
-     * Ottiene il miglior numero di mosse per un livello
-     */
+
     public int getBestMoves(GameLevel level, int levelNumber) {
         String key = getLevelKey(level, levelNumber);
         return movesCache.getOrDefault(key, Integer.MAX_VALUE);
     }
 
-    /**
-     * Ottiene il numero di stelle per un livello
-     */
+
     public int getStars(GameLevel level, int levelNumber) {
         String key = getLevelKey(level, levelNumber);
         return starsCache.getOrDefault(key, 0);
     }
 
-    /**
-     * Calcola il numero di stelle basato sul numero di mosse
-     */
     private int calculateStars(GameLevel level, int moves) {
         // Calcolo basato sulla difficoltà e numero ottimale di mosse
         int optimalMoves = getOptimalMoves(level);
 
         if (moves <= optimalMoves) {
-            return 3; // Perfetto
+            return 3;
         } else if (moves <= optimalMoves * 1.5) {
-            return 2; // Buono
+            return 2;
         } else if (moves <= optimalMoves * 2) {
-            return 1; // Sufficiente
+            return 1;
         } else {
-            return 0; // Completato ma non efficiente
+            return 0;
         }
     }
 
@@ -150,13 +128,11 @@ public class GamePreferences {
      * Verifica se un livello è sbloccato
      */
     public boolean isLevelUnlocked(GameLevel level, int levelNumber) {
-        // Il primo livello è sempre sbloccato
-        if (levelNumber == 1) {
+       if (levelNumber == 1) {
             return true;
         }
 
-        // Gli altri livelli si sbloccano completando il precedente
-        return isLevelCompleted(level, levelNumber - 1);
+       return isLevelCompleted(level, levelNumber - 1);
     }
 
     /**
@@ -190,7 +166,6 @@ public class GamePreferences {
         return (double) totalCompleted / totalLevels * 100.0;
     }
 
-    // Metodi per le preferenze dell'interfaccia
 
     public boolean isSoundEnabled() {
         return preferences.getBoolean(SOUND_ENABLED, true);

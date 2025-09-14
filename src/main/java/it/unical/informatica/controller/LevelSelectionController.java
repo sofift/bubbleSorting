@@ -4,9 +4,6 @@ import it.unical.informatica.model.GameLevel;
 import javafx.stage.Stage;
 import it.unical.informatica.view.LevelSelectionView;
 
-/**
- * Controller per la selezione dei livelli - VERSIONE CORRETTA
- */
 public class LevelSelectionController {
 
     private final Stage primaryStage;
@@ -122,10 +119,6 @@ public class LevelSelectionController {
         }
     }
 
-
-    private void startSelectedLevel(int levelNumber) {
-        startSelectedLevel(selectedDifficulty, levelNumber);
-    }
 
 
     private void returnToMenu() {
