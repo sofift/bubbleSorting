@@ -941,12 +941,29 @@ public class GameView {
 
             alert.setContentText(content);
 
+            // Applica lo stylesheet al dialogo
+            DialogPane dialogPane = alert.getDialogPane();
+            dialogPane.getStylesheets().add(
+                    getClass().getResource("/css/style.css").toExternalForm()
+            );
+            dialogPane.getStyleClass().add("dialog-pane");
+
             // Pulsanti personalizzati
-            ButtonType nextButton = new ButtonType("Livello Successivo");
-            ButtonType restartButton = new ButtonType("Ricomincia");
-            ButtonType menuButton = new ButtonType("Menu Principale");
+            ButtonType nextButton = new ButtonType("Livello Successivo", ButtonBar.ButtonData.OK_DONE);
+            ButtonType restartButton = new ButtonType("Ricomincia", ButtonBar.ButtonData.OTHER);
+            ButtonType menuButton = new ButtonType("Menu Principale", ButtonBar.ButtonData.CANCEL_CLOSE);
 
             alert.getButtonTypes().setAll(nextButton, restartButton, menuButton);
+
+            // Applica classi CSS ai pulsanti
+            Button btnNext = (Button) dialogPane.lookupButton(nextButton);
+            btnNext.getStyleClass().add("dialog-button-primary");
+
+            Button btnRestart = (Button) dialogPane.lookupButton(restartButton);
+            btnRestart.getStyleClass().add("dialog-button-secondary");
+
+            Button btnMenu = (Button) dialogPane.lookupButton(menuButton);
+            btnMenu.getStyleClass().add("dialog-button-secondary");
 
             alert.showAndWait().ifPresent(response -> {
                 if (response == nextButton && onNextLevel != null) {
@@ -959,6 +976,7 @@ public class GameView {
             });
         });
     }
+
 
     // ===============================
     // IMPOSTAZIONI
