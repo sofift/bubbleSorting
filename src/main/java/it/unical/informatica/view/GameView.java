@@ -76,7 +76,6 @@ public class GameView {
     private GameEventHandler.ActionHandler onMenuRequested;
     private GameEventHandler.ActionHandler onHintRequested;
     private GameEventHandler.ActionHandler onSolveRequested;
-    private GameEventHandler.ActionHandler onUndoRequested;
     private GameEventHandler.MoveHandler onMoveRequested;
 
     // ===============================
@@ -273,11 +272,12 @@ public class GameView {
 
 
         hintButton.setOnAction(e -> {
+            hintButton.setDisable(true);
             if (onHintRequested != null && !isAutoSolving) {
                 try {
                     onHintRequested.onAction();
                 } catch (Exception ex) {
-                    System.err.println("❌ Errore nel hint: " + ex.getMessage());
+                    System.err.println("Errore nel hint: " + ex.getMessage());
                 }
             }
         });
@@ -1145,10 +1145,6 @@ public class GameView {
 
     public void setOnSolveRequested(GameEventHandler.ActionHandler handler) {
         this.onSolveRequested = handler;
-    }
-
-    public void setOnUndoRequested(GameEventHandler.ActionHandler handler) {
-        this.onUndoRequested = handler;
     }
 
     public void setOnMoveRequested(GameEventHandler.MoveHandler handler) {

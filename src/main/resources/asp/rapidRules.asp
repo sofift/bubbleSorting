@@ -1,14 +1,4 @@
 
-
-% =========================
-%  RULES (planner ASP) - OTTIMIZZATO con aggregati e choice rules
-%  Mantenendo la logica originale
-% =========================
-% =========================
-% RULES (planner ASP) - OTTIMIZZATO per PRIMA SOLUZIONE
-% Focus su velocità invece che ottimalità
-% =========================
-
 % --- Successor on positions (capacity 4 assumed: 0..3) ---
 succ(0,1). succ(1,2). succ(2,3).
 
@@ -21,7 +11,7 @@ ball(T,P,C,0) :- init_ball(T,P,C), tube(T).
 % --- Step successor ---
 next(S,S1) :- step(S), S1 = S + 1, step(S1).
 
-% --- Attivazione progressiva (SEMPLIFICATA) ---
+% --- Attivazione progressiva ---
 active(0).
 active(S1) :- active(S), next(S,S1).
 
@@ -30,15 +20,15 @@ has_ball(T,S) :- ball(T,_,_,S).
 empty(T,S) :- tube(T), active(S), not has_ball(T,S).
 nonempty(T,S) :- has_ball(T,S).
 
-% OTTIMIZZATO: full usando aggregato #count
+% tubo pieno
 full(T,S) :- tube(T), active(S), #count{P : ball(T,P,_,S)} = 4.
 
-% --- Top of tube ---
+% pallina in cima
 higher(T,S,P) :- active(S), tube(T), pos(P), pos(P2), ball(T,P2,_,S), P2 > P.
 top_pos(T,S,P) :- active(S), tube(T), pos(P), ball(T,P,_,S), not higher(T,S,P).
 top_color(T,S,C) :- active(S), tube(T), top_pos(T,S,P), ball(T,P,C,S).
 
-% --- Move preconditions (guarded by active step) ---
+% pre condizioni per spostare pallina
 canMove(F,T,S) :-
     active(S), tube(F), tube(T), F != T,
     nonempty(F,S), empty(T,S).
@@ -48,10 +38,10 @@ canMove(F,T,S) :-
     nonempty(F,S), not full(T,S),
     top_color(F,S,C), top_color(T,S,C).
 
-% OTTIMIZZATO: Choice rule con forzatura per performance
+% scelta
 { move(F,T,S) : canMove(F,T,S) } :- active(S), not goal(S).
 
-% --- At most one move per step (OTTIMIZZATO con aggregato) ---
+% solo una mossa per step
 :- step(S), #count{F,T : move(F,T,S)} > 1.
 
 % --- No immediate backtracking ---

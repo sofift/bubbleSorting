@@ -283,11 +283,14 @@ public class GameController {
     private void handleHintResult(ShowMove hint) {
         Platform.runLater(() -> {
             isShowingHint = false;
+            gameView.lockTubeInteractions(false);
+            gameView.setBusyCursor(false);
 
             if (hint != null) {
                 Move moveHint = new Move(hint.getFrom() - 1, hint.getTo() - 1, null);
                 gameView.showHint(moveHint);
                 gameView.showMessage("Suggerimento: Sposta dal tubo " + hint.getFrom() + " al tubo " + hint.getTo());
+                gameView.setHintsEnabled(false);
             } else {
                 gameView.showMessage("Nessun suggerimento disponibile");
             }

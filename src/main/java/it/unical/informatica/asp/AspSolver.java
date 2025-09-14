@@ -60,12 +60,17 @@ public class AspSolver {
         }
     }
 
+    private Handler newHandler() {
+        return new DesktopHandler(new DLV2DesktopService(DLV2_PATH));
+    }
+
     public List<ShowMove> solve(GameState gameState) throws ASPSolverException {
         System.out.println("avvio risoluzione ASP.");
         if (gameState == null) throw new ASPSolverException("GameState nullo");
         if (!initialized) throw new ASPSolverException("Solver non inizializzato");
 
         try {
+            handler = newHandler();
             InputProgram rules = new ASPInputProgram();
             rules.addFilesPath(ASP_RULES_FILE);
 
@@ -77,8 +82,6 @@ public class AspSolver {
             handler.addProgram(facts);
 
             Output output = handler.startSync();
-
-            debugPrintAnswerSets(output);
 
             List<ShowMove> moves = extractOptimalMovesSorted(output);
             return moves;
@@ -141,29 +144,10 @@ public class AspSolver {
         String diff = gs.getLevel().getDisplayName();
         if ("Facile".equals(diff)) return 15;
         if ("Medio".equals(diff)) return 25;
-        if ("Difficile".equals(diff)) return 45;
         return 20; // fallback
     }
 
-    private static void debugPrintAnswerSets(Output out) {
-        if (!(out instanceof AnswerSets)) {
-            return;
-        }
-        AnswerSets as = (AnswerSets) out;
 
-        List<AnswerSet> all = as.getAnswersets();
-
-        try {
-            List<AnswerSet> optimal = as.getOptimalAnswerSets();
-            if (optimal != null && !optimal.isEmpty()) {
-                System.out.println("Optimal answer sets: " + optimal.size());
-            } else {
-                System.out.println("Nessun optimal set (normale senza ottimizzazione).");
-            }
-        } catch (Exception e) {
-            System.out.println("Optimal non disponibile: " + e.getMessage());
-        }
-    }
 
     private List<ShowMove> extractOptimalMovesSorted(Output output) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
         List<ShowMove> moves = new ArrayList<>();
