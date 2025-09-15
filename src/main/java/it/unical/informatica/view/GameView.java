@@ -22,14 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
-/**
- * Vista principale del gioco Bubble Sorting.
- * Gestisce la visualizzazione dell'interfaccia grafica, le animazioni
- * e l'interazione con l'utente seguendo il pattern MVC.
- */
 public class GameView {
-
-    // ===== CONFIGURAZIONE =====
     private static final double TUBE_WIDTH = 70;
     private static final double TUBE_HEIGHT = 150;
     private static final double BALL_RADIUS = 15;
@@ -37,7 +30,6 @@ public class GameView {
     private static final double ANIMATION_DURATION = 200; // millisecondi
     private static final double AUTO_SOLVE_DELAY = 500; // Pausa tra le mosse nella risoluzione automatica
 
-    // ===== COMPONENTI CORE =====
     private final GameLevel gameLevel;
     private Scene scene;
     private VBox mainContainer;
@@ -45,14 +37,12 @@ public class GameView {
     private VBox controlPanel;
     private VBox statusPanel;
 
-    // ===== STATO DELLA VISTA =====
     private GameState currentGameState;
     private List<TubeView> tubeViews;
     private int selectedTubeId = -1;
     private boolean animationsEnabled;
     private boolean hintsEnabled;
 
-    // ===== STATO RISOLUZIONE AUTOMATICA =====
     private boolean isAutoSolving = false;
     private List<ShowMove> solutionMoves = new ArrayList<>();
     private int currentSolutionStep = 0;
@@ -60,17 +50,14 @@ public class GameView {
     private boolean interactionsLocked = false;
 
 
-    // ===== COMPONENTI UI =====
-    private Text movesText;
+   private Text movesText;
     private Text timeText;
     private Text messageText;
     private Button restartButton;
     private Button menuButton;
     private Button hintButton;
     private Button solveButton;
-    private ProgressDialog progressDialog;
 
-    // ===== EVENT HANDLERS =====
     private GameEventHandler.TubeClickHandler onTubeClicked;
     private GameEventHandler.ActionHandler onRestartRequested;
     private GameEventHandler.ActionHandler onMenuRequested;
@@ -78,30 +65,19 @@ public class GameView {
     private GameEventHandler.ActionHandler onSolveRequested;
     private GameEventHandler.MoveHandler onMoveRequested;
 
-    // ===============================
-    // COSTRUTTORE E INIZIALIZZAZIONE
-    // ===============================
 
-    /**
-     * Costruttore della GameView
-     * @param gameLevel Livello di difficoltà del gioco
-     */
     public GameView(GameLevel gameLevel) {
         this.gameLevel = gameLevel;
         this.tubeViews = new ArrayList<>();
 
-        // Carica le preferenze
         GamePreferences preferences = GamePreferences.getInstance();
         this.animationsEnabled = preferences.isAnimationsEnabled();
         this.hintsEnabled = preferences.isShowHints();
 
         initializeView();
-        System.out.println("✅ GameView inizializzata per " + gameLevel.getDisplayName());
     }
 
-    /**
-     * Inizializza tutti i componenti della vista
-     */
+
     private void initializeView() {
         try {
             createMainLayout();
@@ -110,17 +86,14 @@ public class GameView {
             createStatusPanel();
             createScene();
 
-            System.out.println("✅ Layout della vista creato");
 
         } catch (Exception e) {
-            System.err.println("❌ Errore nell'inizializzazione della vista: " + e.getMessage());
+            System.err.println("Errore nell'inizializzazione della vista: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    /**
-     * Crea il layout principale
-     */
+
     private void createMainLayout() {
         mainContainer = new VBox();
         mainContainer.setPrefHeight(Region.USE_COMPUTED_SIZE);
@@ -131,9 +104,7 @@ public class GameView {
         mainContainer.setAlignment(Pos.TOP_CENTER);
     }
 
-    /**
-     * Crea l'area di gioco con i tubi
-     */
+
     private void createGameArea() {
         gameArea = new HBox();
         gameArea.getStyleClass().add("game-area");
@@ -156,31 +127,28 @@ public class GameView {
         mainContainer.getChildren().add(gameArea);
     }
 
-    /**
-     * Crea il pannello di controllo
-     */
     private void createControlPanel() {
         controlPanel = new VBox();
         controlPanel.getStyleClass().add("control-panel");
         controlPanel.setSpacing(15);
         controlPanel.setAlignment(Pos.CENTER);
 
-        // Riga superiore - pulsanti principali
+        // Riga superiore : pulsanti principali
         HBox mainButtons = new HBox();
         mainButtons.setSpacing(10);
         mainButtons.setAlignment(Pos.CENTER);
 
-        restartButton = createControlButton("🔄 Riavvia", "control-button");
-        menuButton = createControlButton("🏠 Menu", "control-button secondary-button");
+        restartButton = createControlButton("Riavvia", "control-button");
+        menuButton = createControlButton("Menu", "control-button secondary-button");
         mainButtons.getChildren().addAll(restartButton, menuButton);
 
-        // Riga inferiore - pulsanti AI
+        // Riga inferiore : ris. auto
         HBox aiButtons = new HBox();
         aiButtons.setSpacing(10);
         aiButtons.setAlignment(Pos.CENTER);
 
-        hintButton = createControlButton("💡 Suggerimento", "control-button ai-button");
-        solveButton = createControlButton("🤖 Risolvi", "control-button ai-button");
+        hintButton = createControlButton("Suggerimento", "control-button ai-button");
+        solveButton = createControlButton("Risolvi", "control-button ai-button");
 
         aiButtons.getChildren().addAll(hintButton, solveButton);
 
@@ -191,9 +159,7 @@ public class GameView {
         mainContainer.getChildren().add(controlPanel);
     }
 
-    /**
-     * Crea il pannello di stato
-     */
+
     private void createStatusPanel() {
         statusPanel = new VBox();
         statusPanel.getStyleClass().add("status-panel");
@@ -201,7 +167,7 @@ public class GameView {
         statusPanel.setAlignment(Pos.CENTER);
         statusPanel.setPadding(new Insets(10));
 
-        // Informazioni del livello
+        // info del livello
         Text levelInfo = new Text(gameLevel.getDisplayName());
         levelInfo.getStyleClass().add("level-info");
 
@@ -227,26 +193,20 @@ public class GameView {
         mainContainer.getChildren().add(statusPanel);
     }
 
-    /**
-     * Crea la scena principale
-     */
+
     private void createScene() {
         scene = new Scene(mainContainer, 1000, 700);
         scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
     }
 
-    /**
-     * Crea un pulsante di controllo con stile
-     */
+
     private Button createControlButton(String text, String styleClass) {
         Button button = new Button(text);
         button.getStyleClass().addAll(styleClass.split(" "));
         return button;
     }
 
-    /**
-     * Configura gli event handlers per i pulsanti di controllo
-     */
+
     private void setupControlButtonHandlers() {
         restartButton.setOnAction(e -> {
             if (onRestartRequested != null) {
@@ -254,7 +214,7 @@ public class GameView {
                     stopAutoSolving(); // Ferma la risoluzione automatica se in corso
                     onRestartRequested.onAction();
                 } catch (Exception ex) {
-                    System.err.println("❌ Errore nel restart: " + ex.getMessage());
+                    System.err.println("Errore nel restart: " + ex.getMessage());
                 }
             }
         });
@@ -265,7 +225,7 @@ public class GameView {
                     stopAutoSolving(); // Ferma la risoluzione automatica se in corso
                     onMenuRequested.onAction();
                 } catch (Exception ex) {
-                    System.err.println("❌ Errore nel menu: " + ex.getMessage());
+                    System.err.println("Errore nel menu: " + ex.getMessage());
                 }
             }
         });
@@ -291,55 +251,40 @@ public class GameView {
                         onSolveRequested.onAction();
                     }
                 } catch (Exception ex) {
-                    System.err.println("❌ Errore nella risoluzione: " + ex.getMessage());
+                    System.err.println("Errore nella risoluzione: " + ex.getMessage());
                 }
             }
         });
     }
 
-    // ===============================
-    // AGGIORNAMENTO STATO DI GIOCO
-    // ===============================
 
-    /**
-     * Aggiorna la vista con un nuovo stato di gioco
-     * @param gameState Nuovo stato del gioco
-     */
     public void updateGameState(GameState gameState) {
         if (gameState == null) return;
 
         try {
             this.currentGameState = gameState;
 
-            // Aggiorna i tubi
             updateTubes(gameState.getTubes());
 
-            // Aggiorna le statistiche
             updateStats(gameState);
 
-            // Aggiorna lo stato dei pulsanti
             updateButtonStates(gameState);
 
-            System.out.println("✅ Vista aggiornata - Mosse: " + gameState.getMoves());
 
         } catch (Exception e) {
-            System.err.println("❌ Errore nell'aggiornamento della vista: " + e.getMessage());
+            System.err.println("Errore nell'aggiornamento della vista: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    /**
-     * Aggiorna la visualizzazione dei tubi
-     */
+
     private void updateTubes(List<Tube> tubes) {
         for (int i = 0; i < tubes.size() && i < tubeViews.size(); i++) {
             tubeViews.get(i).updateTube(tubes.get(i));
         }
     }
 
-    /**
-     * Aggiorna le statistiche visualizzate
-     */
+
     private void updateStats(GameState gameState) {
         Platform.runLater(() -> {
             movesText.setText("Mosse: " + gameState.getMoves());
@@ -351,9 +296,7 @@ public class GameView {
         });
     }
 
-    /**
-     * Aggiorna lo stato dei pulsanti in base al gioco
-     */
+
     private void updateButtonStates(GameState gameState) {
         Platform.runLater(() -> {
             if (gameState.isGameWon()) {
@@ -363,11 +306,11 @@ public class GameView {
                 hintButton.setDisable(!hintsEnabled || isAutoSolving);
 
                 if (isAutoSolving) {
-                    solveButton.setText("⏹ Stop");
+                    solveButton.setText("Stop");
                     solveButton.getStyleClass().removeAll("ai-button");
                     solveButton.getStyleClass().add("danger-button");
                 } else {
-                    solveButton.setText("🤖 Risolvi");
+                    solveButton.setText("Risolvi");
                     solveButton.getStyleClass().removeAll("danger-button");
                     solveButton.getStyleClass().add("ai-button");
                     solveButton.setDisable(false);
@@ -376,15 +319,7 @@ public class GameView {
         });
     }
 
-    // ===============================
-    // GESTIONE SELEZIONE TUBI
-    // ===============================
 
-    /**
-     * Gestisce la selezione di un tubo
-     * @param tubeId ID del tubo selezionato
-     * @param gameState Stato corrente del gioco
-     */
     public void handleTubeSelection(int tubeId, GameState gameState) {
         if (isAutoSolving) {
             showMessage("Risoluzione automatica in corso...", "auto-solving");
@@ -392,20 +327,15 @@ public class GameView {
         }
 
         if (selectedTubeId == -1) {
-            // Prima selezione
             selectTube(tubeId, gameState);
         } else if (selectedTubeId == tubeId) {
-            // Deseleziona lo stesso tubo
             deselectTube();
         } else {
-            // Seconda selezione - tenta la mossa
             attemptMove(selectedTubeId, tubeId, gameState);
         }
     }
 
-    /**
-     * Seleziona un tubo
-     */
+
     private void selectTube(int tubeId, GameState gameState) {
         Tube tube = gameState.getTube(tubeId);
         if (tube == null || tube.isEmpty()) {
@@ -420,9 +350,7 @@ public class GameView {
         highlightValidMoves(tubeId, gameState);
     }
 
-    /**
-     * Deseleziona il tubo corrente
-     */
+
     private void deselectTube() {
         if (selectedTubeId != -1) {
             tubeViews.get(selectedTubeId).setSelected(false);
@@ -432,11 +360,8 @@ public class GameView {
         }
     }
 
-    /**
-     * Tenta di eseguire una mossa
-     */
+
     private void attemptMove(int fromTubeId, int toTubeId, GameState gameState) {
-        // Verifica se la mossa è valida
         Tube fromTube = gameState.getTube(fromTubeId);
         Tube toTube = gameState.getTube(toTubeId);
 
@@ -452,18 +377,15 @@ public class GameView {
             return;
         }
 
-        // Notifica al GameController di eseguire la mossa
         if (onMoveRequested != null) {
             onMoveRequested.onMove(fromTubeId, toTubeId);
         }
 
         deselectTube();
-        showMessage(""); // Pulisce il messaggio
+        showMessage("");
     }
 
-    /**
-     * Evidenzia i tubi dove è possibile spostare la pallina
-     */
+
     private void highlightValidMoves(int fromTubeId, GameState gameState) {
         Tube fromTube = gameState.getTube(fromTubeId);
         if (fromTube == null || fromTube.isEmpty()) return;
@@ -480,9 +402,7 @@ public class GameView {
         }
     }
 
-    /**
-     * Rimuove tutti gli highlight dai tubi
-     */
+
     private void clearHighlights() {
         for (TubeView tubeView : tubeViews) {
             tubeView.setSelected(false);
@@ -493,7 +413,7 @@ public class GameView {
     public void setTubesInteractive(boolean enabled) {
         interactionsLocked = !enabled;
         if (gameArea != null) {
-            gameArea.setDisable(!enabled); // disabilita tutti i figli (tubi) in cascata
+            gameArea.setDisable(!enabled);
         }
     }
     public void lockTubeInteractions(boolean lock) {
@@ -505,16 +425,9 @@ public class GameView {
         }
     }
 
-    // ===============================
-    // ANIMAZIONI
-    // ===============================
 
-    /**
-     * Anima il movimento di una pallina da un tubo all'altro
-     */
     public void animateMove(int fromTubeId, int toTubeId, Runnable onComplete) {
         if (!animationsEnabled) {
-            // Senza animazione, esegui subito il callback
             if (onComplete != null) {
                 onComplete.run();
             }
@@ -522,38 +435,29 @@ public class GameView {
         }
 
         try {
-            System.out.println("🎬 Avvio animazione: " + fromTubeId + " → " + toTubeId);
 
-            // Ottieni i contenitori dei tubi
             VBox fromContainer = tubeViews.get(fromTubeId).getContainer();
             VBox toContainer = tubeViews.get(toTubeId).getContainer();
 
-            // Animazione migliorata con movimento reale della pallina
             createBallMoveAnimation(fromContainer, toContainer, onComplete);
 
         } catch (Exception e) {
-            System.err.println("❌ Errore nell'animazione: " + e.getMessage());
-            // In caso di errore, esegui comunque il callback
+            System.err.println("Errore nell'animazione: " + e.getMessage());
             if (onComplete != null) {
                 onComplete.run();
             }
         }
     }
 
-    /**
-     * Crea un'animazione realistica del movimento della pallina
-     */
+
     private void createBallMoveAnimation(VBox fromContainer, VBox toContainer, Runnable onComplete) {
-        // Per ora manteniamo l'animazione semplice, ma funzionale
         Timeline timeline = new Timeline();
 
-        // Animazione di evidenziazione dei tubi coinvolti
         KeyFrame highlight = new KeyFrame(Duration.millis(50), e -> {
             fromContainer.getStyleClass().add("moving-from");
             toContainer.getStyleClass().add("moving-to");
         });
 
-        // Rimozione dell'evidenziazione e callback
         KeyFrame finish = new KeyFrame(Duration.millis(ANIMATION_DURATION), e -> {
             fromContainer.getStyleClass().removeAll("moving-from");
             toContainer.getStyleClass().removeAll("moving-to");
@@ -566,30 +470,19 @@ public class GameView {
         timeline.play();
     }
 
-    /**
-     * Mostra l'animazione di vittoria
-     */
+
     public void showVictoryAnimation() {
         if (!animationsEnabled) return;
 
         try {
-            // Animazione semplice di celebrazione
             for (TubeView tubeView : tubeViews) {
                 tubeView.playVictoryAnimation();
             }
         } catch (Exception e) {
-            System.err.println("❌ Errore nell'animazione di vittoria: " + e.getMessage());
+            System.err.println("Errore nell'animazione di vittoria: " + e.getMessage());
         }
     }
 
-    // ===============================
-    // RISOLUZIONE AUTOMATICA - NUOVE FUNZIONALITÀ
-    // ===============================
-
-    /**
-     * Avvia la risoluzione automatica animata del puzzle
-     * @param solution Lista delle mosse da eseguire
-     */
     public void startAutoSolve(List<ShowMove> solution) {
         if (solution == null || solution.isEmpty()) {
             showMessage("Nessuna soluzione trovata!", "error");
@@ -601,64 +494,48 @@ public class GameView {
             return;
         }
 
-        System.out.println("🤖 Avvio risoluzione automatica con " + solution.size() + " mosse");
 
         this.solutionMoves = new ArrayList<>(solution);
         this.currentSolutionStep = 0;
         this.isAutoSolving = true;
 
-        // Disabilita l'interazione dell'utente
         disableUserInteraction();
 
-        // Mostra messaggio informativo
-        showMessage("🤖 Risoluzione automatica in corso... Mossa 1/" + solution.size(), "auto-solving");
+        showMessage("Risoluzione automatica in corso... Mossa 1/" + solution.size(), "auto-solving");
 
-        // Avvia l'esecuzione delle mosse
         executeNextSolutionMove();
     }
 
-    /**
-     * Esegue la prossima mossa della soluzione
-     */
+
     private void executeNextSolutionMove() {
         if (!isAutoSolving || currentSolutionStep >= solutionMoves.size()) {
-            // Soluzione completata
             finishAutoSolve();
             return;
         }
 
         ShowMove move = solutionMoves.get(currentSolutionStep);
 
-        // Converti gli ID da ASP (1-based) a Java (0-based)
         int fromTube = move.getFrom() - 1;
         int toTube = move.getTo() - 1;
 
-        System.out.println("🎯 Esecuzione mossa automatica " + (currentSolutionStep + 1) + "/" +
-                solutionMoves.size() + ": " + (fromTube + 1) + " → " + (toTube + 1));
 
-        // Evidenzia i tubi coinvolti nella mossa
         highlightAutoSolveMove(fromTube, toTube);
 
-        // Esegui la mossa tramite il controller
         if (onMoveRequested != null) {
             onMoveRequested.onMove(fromTube, toTube);
         }
 
         currentSolutionStep++;
 
-        // Aggiorna il messaggio
         if (currentSolutionStep < solutionMoves.size()) {
             showMessage("Risoluzione automatica in corso... Mossa " +
                     (currentSolutionStep + 1) + "/" + solutionMoves.size(), "auto-solving");
         }
 
-        // Programma la prossima mossa dopo un delay
         scheduleNextMove();
     }
 
-    /**
-     * Programma l'esecuzione della prossima mossa
-     */
+
     private void scheduleNextMove() {
         if (!isAutoSolving) return;
 
@@ -669,15 +546,11 @@ public class GameView {
         autoSolveTimeline.play();
     }
 
-    /**
-     * Evidenzia i tubi coinvolti nella mossa automatica
-     */
+
     private void highlightAutoSolveMove(int fromTube, int toTube) {
         Platform.runLater(() -> {
-            // Pulisce tutti gli highlight precedenti
             clearHighlights();
 
-            // Evidenzia i tubi della mossa corrente
             if (fromTube >= 0 && fromTube < tubeViews.size()) {
                 tubeViews.get(fromTube).setAutoSolveHighlight(true);
             }
@@ -685,7 +558,6 @@ public class GameView {
                 tubeViews.get(toTube).setAutoSolveHighlight(true);
             }
 
-            // Rimuovi l'evidenziazione dopo un breve periodo
             Timeline clearHighlight = new Timeline(new KeyFrame(
                     Duration.millis(AUTO_SOLVE_DELAY * 0.7),
                     e -> {
@@ -701,58 +573,44 @@ public class GameView {
         });
     }
 
-    /**
-     * Ferma la risoluzione automatica
-     */
+
     public void stopAutoSolving() {
         if (!isAutoSolving) return;
 
-        System.out.println("⏹ Interruzione risoluzione automatica");
 
         isAutoSolving = false;
         solutionMoves.clear();
         currentSolutionStep = 0;
 
-        // Ferma il timer se attivo
-        if (autoSolveTimeline != null) {
+         if (autoSolveTimeline != null) {
             autoSolveTimeline.stop();
             autoSolveTimeline = null;
         }
 
-        // Riabilita l'interazione dell'utente
         enableUserInteraction();
 
-        // Pulisce gli highlight
         clearHighlights();
         clearAutoSolveHighlights();
 
-        // Aggiorna i pulsanti
         updateButtonStates(currentGameState);
 
         showMessage("Risoluzione automatica interrotta", "info");
     }
 
-    /**
-     * Completa la risoluzione automatica
-     */
     private void finishAutoSolve() {
-        System.out.println("✅ Risoluzione automatica completata!");
 
         isAutoSolving = false;
         solutionMoves.clear();
         currentSolutionStep = 0;
 
-        // Riabilita l'interazione dell'utente
         enableUserInteraction();
 
-        // Pulisce gli highlight
-        clearHighlights();
-        clearAutoSolveHighlights();
+         clearHighlights();
+         clearAutoSolveHighlights();
 
-        // Aggiorna i pulsanti
         updateButtonStates(currentGameState);
 
-        showMessage("🎉 Puzzle risolto automaticamente!", "success");
+        showMessage("Puzzle risolto automaticamente!", "success");
 
         // Mostra animazione di vittoria se il gioco è completato
         if (currentGameState != null && currentGameState.isGameWon()) {
@@ -760,59 +618,43 @@ public class GameView {
         }
     }
 
-    /**
-     * Disabilita l'interazione dell'utente durante la risoluzione automatica
-     */
+
     private void disableUserInteraction() {
         Platform.runLater(() -> {
-            // Disabilita i click sui tubi
             for (TubeView tubeView : tubeViews) {
                 tubeView.setInteractionEnabled(false);
             }
 
-            // Aggiorna lo stato dei pulsanti
             updateButtonStates(currentGameState);
         });
     }
 
-    /**
-     * Riabilita l'interazione dell'utente
-     */
+
     private void enableUserInteraction() {
         Platform.runLater(() -> {
-            // Riabilita i click sui tubi
             for (TubeView tubeView : tubeViews) {
                 tubeView.setInteractionEnabled(true);
             }
         });
     }
 
-    /**
-     * Pulisce tutti gli highlight della risoluzione automatica
-     */
+
     private void clearAutoSolveHighlights() {
         for (TubeView tubeView : tubeViews) {
             tubeView.setAutoSolveHighlight(false);
         }
     }
 
-    // ===============================
-    // FUNZIONALITÀ ASP
-    // ===============================
-
-    /**
-     * Mostra un suggerimento visualmente
-     */
     public void showHint(Move hint) {
         if (hint == null) return;
 
         try {
             Platform.runLater(() -> {
-                // Evidenzia la mossa suggerita
+                // evidenzia la mossa suggerita
                 tubeViews.get(hint.getFromTubeId()).setHinted(true);
                 tubeViews.get(hint.getToTubeId()).setHinted(true);
 
-                // Rimuovi l'hint dopo qualche secondo
+                // rimuovi l'hint dopo qualche secondo
                 Timeline timeline = new Timeline(
                         new KeyFrame(Duration.seconds(3), e -> clearHints())
                 );
@@ -820,13 +662,11 @@ public class GameView {
             });
 
         } catch (Exception e) {
-            System.err.println("❌ Errore nella visualizzazione del hint: " + e.getMessage());
+            System.err.println("Errore nella visualizzazione del hint: " + e.getMessage());
         }
     }
 
-    /**
-     * Gestisce la soluzione ASP - METODO PRINCIPALE PER LA RISOLUZIONE AUTOMATICA
-     */
+
     public void handleSolution(List<ShowMove> solution) {
         if (solution == null || solution.isEmpty()) {
             Platform.runLater(() -> {
@@ -843,9 +683,7 @@ public class GameView {
         startAutoSolve(solution);
     }
 
-    /**
-     * Mostra la soluzione completa (modalità precedente - ora deprecata)
-     */
+
     @Deprecated
     public void showSolution(List<Move> solution) {
         if (solution == null || solution.isEmpty()) return;
@@ -871,22 +709,14 @@ public class GameView {
         });
     }
 
-    /**
-     * Rimuove tutti i suggerimenti visivi
-     */
+
     private void clearHints() {
         for (TubeView tubeView : tubeViews) {
             tubeView.setHinted(false);
         }
     }
 
-    // ===============================
-    // DIALOGHI E MESSAGGI
-    // ===============================
 
-    /**
-     * Mostra un messaggio all'utente
-     */
     public void showMessage(String message, String messageType) {
         Platform.runLater(() -> {
             if (messageText != null) {
@@ -900,10 +730,9 @@ public class GameView {
                     messageText.getStyleClass().add(messageType);
                 }
 
-                // Fade out automatico dopo 5 secondi per messaggi normali
                 if (!message.isEmpty() && !"auto-solving".equals(messageType)) {
                     Timeline fadeOut = new Timeline(
-                            new KeyFrame(Duration.seconds(5), e -> {
+                            new KeyFrame(Duration.seconds(10), e -> {
                                 if (messageText.getText().equals(message)) {
                                     messageText.setText("");
                                     messageText.getStyleClass().removeAll("auto-solving", "success", "error", "info", "pulsing");
@@ -919,9 +748,7 @@ public class GameView {
     public void showMessage(String message) {
         showMessage(message, null);
     }
-    /**
-     * Mostra il dialogo di vittoria
-     */
+
     public void showVictoryDialog(int moves, int score, Runnable onNextLevel,
                                   Runnable onRestart, Runnable onMenu) {
         Platform.runLater(() -> {
@@ -941,21 +768,18 @@ public class GameView {
 
             alert.setContentText(content);
 
-            // Applica lo stylesheet al dialogo
             DialogPane dialogPane = alert.getDialogPane();
             dialogPane.getStylesheets().add(
                     getClass().getResource("/css/style.css").toExternalForm()
             );
             dialogPane.getStyleClass().add("dialog-pane");
 
-            // Pulsanti personalizzati
             ButtonType nextButton = new ButtonType("Livello Successivo", ButtonBar.ButtonData.OK_DONE);
             ButtonType restartButton = new ButtonType("Ricomincia", ButtonBar.ButtonData.OTHER);
             ButtonType menuButton = new ButtonType("Menu Principale", ButtonBar.ButtonData.CANCEL_CLOSE);
 
             alert.getButtonTypes().setAll(nextButton, restartButton, menuButton);
 
-            // Applica classi CSS ai pulsanti
             Button btnNext = (Button) dialogPane.lookupButton(nextButton);
             btnNext.getStyleClass().add("dialog-button-primary");
 
@@ -978,34 +802,18 @@ public class GameView {
     }
 
 
-    // ===============================
-    // IMPOSTAZIONI
-    // ===============================
 
-    /**
-     * Abilita o disabilita le animazioni
-     */
     public void setAnimationsEnabled(boolean enabled) {
         this.animationsEnabled = enabled;
-        System.out.println("Animazioni " + (enabled ? "abilitate" : "disabilitate"));
     }
 
-    /**
-     * Abilita o disabilita i suggerimenti
-     */
+
     public void setHintsEnabled(boolean enabled) {
         this.hintsEnabled = enabled;
         hintButton.setDisable(!enabled);
-        System.out.println("Suggerimenti " + (enabled ? "abilitati" : "disabilitati"));
     }
 
-    // ===============================
-    // CLASSE INTERNA TUBEVIEW - VERSIONE ESTESA
-    // ===============================
 
-    /**
-     * Classe per rappresentare visualmente un singolo tubo
-     */
     private class TubeView {
         private final int tubeId;
         private VBox container;
@@ -1031,11 +839,9 @@ public class GameView {
             container.setPrefWidth(TUBE_WIDTH);
             container.getStyleClass().add("tube-container");
 
-            // Numero del tubo
             Text tubeNumber = new Text(String.valueOf(tubeId + 1));
             tubeNumber.getStyleClass().add("tube-number");
 
-            // Container per le palline
             ballContainer = new VBox();
             ballContainer.setAlignment(Pos.BOTTOM_CENTER);
             ballContainer.setPrefHeight(TUBE_HEIGHT);
@@ -1048,8 +854,7 @@ public class GameView {
 
             container.getChildren().addAll(tubeNumber, ballContainer, tubeBase);
 
-            // Click handler
-            container.setOnMouseClicked(e -> {
+             container.setOnMouseClicked(e -> {
                 if (onTubeClicked != null && interactionEnabled) {
                     onTubeClicked.onTubeClicked(tubeId);
                 }
@@ -1063,7 +868,7 @@ public class GameView {
             for (Ball ball : tube.getBalls()) {
                 Circle ballCircle = createBallCircle(ball);
                 ballCircles.add(ballCircle);
-                ballContainer.getChildren().add(0, ballCircle); // Aggiungi in cima
+                ballContainer.getChildren().add(0, ballCircle);
             }
 
             updateVisualState();
@@ -1073,7 +878,6 @@ public class GameView {
             Circle circle = new Circle(BALL_RADIUS);
             circle.getStyleClass().add("ball");
 
-            // Imposta il colore
             String colorHex = ball.getColor().getHexColor();
             circle.setFill(Color.web(colorHex));
             circle.setStroke(Color.DARKGRAY);
@@ -1138,10 +942,6 @@ public class GameView {
         }
     }
 
-    // ===============================
-    // GETTERS E SETTERS
-    // ===============================
-
     public Scene getScene() {
         return scene;
     }
@@ -1154,7 +954,6 @@ public class GameView {
         return isAutoSolving;
     }
 
-    // Event handlers setters
     public void setOnTubeClicked(GameEventHandler.TubeClickHandler handler) {
         this.onTubeClicked = handler;
     }

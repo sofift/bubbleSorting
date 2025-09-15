@@ -37,15 +37,12 @@ public class GameState {
 
 
     private void loadLevelFromJSON() {
-        System.out.println("Caricamento livello da JSON: " + level.getDisplayName() + " - Livello " + levelNumber);
 
         LevelLoader levelLoader = new LevelLoader();
         try {
             levelLoader.loadLevel(this, level, levelNumber);
             System.out.println("Livello caricato con successo dal JSON");
 
-            // Debug: stampa la configurazione caricata
-            printLoadedConfiguration();
 
         } catch (LevelLoader.LevelLoadException e) {
             System.err.println("ERRORE CRITICO: Impossibile caricare il livello dal JSON: " + e.getMessage());
@@ -53,24 +50,7 @@ public class GameState {
     }
 
 
-    private void printLoadedConfiguration() {
-        System.out.println("Configurazione caricata:");
-        for (int i = 0; i < tubes.size(); i++) {
-            Tube tube = tubes.get(i);
-            List<Ball> balls = tube.getBalls();
 
-            System.out.print("   Tubo " + (i + 1) + ": ");
-            if (balls.isEmpty()) {
-                System.out.println("vuoto");
-            } else {
-                for (int j = 0; j < balls.size(); j++) {
-                    if (j > 0) System.out.print(", ");
-                    System.out.print(balls.get(j).getColor().name());
-                }
-                System.out.println();
-            }
-        }
-    }
 
     public boolean makeMove(int fromTubeId, int toTubeId) {
         if (gameWon || fromTubeId == toTubeId) {

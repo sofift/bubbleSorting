@@ -1,10 +1,7 @@
 
-/* ================================
-   MENU PRINCIPALE
-   ================================ */
+/*MENU PRINCIPALE*/
 
 .menu-container {
-    /* prima: linear-gradient(#667eea, #764ba2) */
     -fx-background-color: #1B3A57;
     -fx-padding: 50 30;
     -fx-alignment: center;
@@ -61,13 +58,11 @@
 .menu-button.danger-button { -fx-background-color: rgba(231, 76, 60, 0.9); -fx-text-fill: white; }
 .menu-button.danger-button:hover { -fx-background-color: #C0392B; }
 
-/* ================================
-   DIALOG DI SELEZIONE DIFFICOLTA
-   ================================ */
+/* DIALOG DI SELEZIONE DIFFICOLTA */
 
 .dialog-content {
     -fx-background-color: white;
-    -fx-background-radius: 16; /* più fine */
+    -fx-background-radius: 16;
 }
 
 .difficulty-card {
@@ -100,14 +95,12 @@
 }
 .difficulty-radio:selected > .radio { -fx-background-color: #2E86C1; }
 
-/* ================================
-   GAME AREA
-   ================================ */
+/* GAME AREA */
 
 .game-container {
     -fx-background-color: #1B3A57;
-    -fx-padding: 16 16 24 16;      /* un po' di respiro ai lati */
-    -fx-spacing: 12;               /* riduce il gap tra blocchi */
+    -fx-padding: 16 16 24 16;
+    -fx-spacing: 12;
     -fx-alignment: center;
 }
 
@@ -128,15 +121,12 @@
     -fx-border-color: rgba(0, 0, 0, 0.06);
     -fx-border-width: 1;
     -fx-border-radius: 18;
-    -fx-padding: 28 24 12 24;          /* più spazio in basso per la toolbar */
+    -fx-padding: 28 24 12 24;
     -fx-spacing: 18;
     -fx-alignment: center;
-    /* ombra molto leggera per non staccare troppo */
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 12, 0, 0, 3);
 }
-/* ================================
-   TUBI
-   ================================ */
+/* TUBI */
 
 .tube-container {
     -fx-cursor: hand;
@@ -147,9 +137,9 @@
 }
 
 .tube-container.selected {
-    -fx-background-color: rgba(46, 134, 193, 0.18); /* blu */
+    -fx-background-color: rgba(46, 134, 193, 0.18);
     -fx-border-color: #2E86C1;
-    -fx-border-width: 2; /* da 3 → 2 */
+    -fx-border-width: 2;
     -fx-border-radius: 12;
     -fx-effect: dropshadow(gaussian, rgba(46,134,193,0.35), 10, 0, 0, 0);
 }
@@ -162,14 +152,14 @@
 .tube-container.hinted {
     -fx-background-color: rgba(243, 156, 18, 0.20);
     -fx-border-color: #F39C12;
-    -fx-border-width: 2; /* da 3 → 2 */
+    -fx-border-width: 2;
     -fx-border-radius: 12;
     -fx-effect: dropshadow(gaussian, rgba(243,156,18,0.30), 10, 0, 0, 0);
 }
 .tube-container.auto-solve-highlight {
-    -fx-background-color: rgba(118, 75, 162, 0.18); /* viola */
+    -fx-background-color: rgba(118, 75, 162, 0.18);
     -fx-border-color: #764BA2;
-    -fx-border-width: 2; /* da 4 → 2 */
+    -fx-border-width: 2;
     -fx-border-radius: 12;
     -fx-effect: dropshadow(gaussian, rgba(155,89,182,0.28), 12, 0, 0, 0);
 }
@@ -181,9 +171,8 @@
     -fx-text-alignment: center;
 }
 
-/* prima: gradiente metallico; ora piatto, stessa famiglia di grigi */
 .tube-base {
-    -fx-fill: #A7B1B3;        /* media tra #BDC3C7 e #95A5A6 */
+    -fx-fill: #A7B1B3;
     -fx-stroke: #7F8C8D;
     -fx-stroke-width: 2;
     -fx-arc-width: 10;
@@ -197,20 +186,17 @@
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.28), 6, 0, 1, 1);
 }
 
-/* ================================
-   CONTROLLI DI GIOCO
-   ================================ */
+/* CONTROLLI DI GIOCO */
 
-/* === CONTROL PANEL “FUSO” CON LA GAME AREA ===
-   Trasparente, senza bordo/ombra: sembra una toolbar interna alla card */
+/*  CONTROL PANEL “FUSO” CON LA GAME AREA */
 .control-panel {
-    -fx-background-color: transparent; /* via il rettangolone bianco separato */
+    -fx-background-color: transparent;
     -fx-background-radius: 0;
     -fx-border-width: 0;
-    -fx-padding: 8 0 6 0;              /* compatto, aderente alla game-area */
+    -fx-padding: 8 0 6 0;
     -fx-spacing: 12;
     -fx-alignment: center;
-    -fx-effect: null;                  /* niente ombra */
+    -fx-effect: null;
 }
 .message-label {
     -fx-text-fill: #2C3E50;
@@ -222,11 +208,11 @@
 }
 
 .control-button {
-    -fx-background-color: #2E86C1; /* blu medio */
+    -fx-background-color: #2E86C1;
     -fx-text-fill: white;
     -fx-font-size: 14px;
     -fx-font-weight: bold;
-    -fx-padding: 8 16;        /* più snelli */
+    -fx-padding: 8 16;
     -fx-background-radius: 10;
     -fx-border-radius: 10;
     -fx-cursor: hand;
@@ -263,16 +249,13 @@
 .control-button.danger-button { -fx-background-color: #E74C3C; }
 .control-button.danger-button:hover { -fx-background-color: #C0392B; }
 
-/* ================================
-   PROGRESS BAR
-   ================================ */
+/* PROGRESS BAR */
 
 .progress-bar {
     -fx-background-color: #2E86C1;
     -fx-background-radius: 8;
     -fx-padding: 0;
 }
-/* prima: gradiente blu → ora piatto */
 .progress-bar > .bar {
     -fx-background-color: #2E86C1;
     -fx-background-radius: 8;
@@ -286,13 +269,10 @@
     -fx-border-radius: 8;
 }
 
-/* ================================
-   LEVEL SELECTION
-   ================================ */
+/* LEVEL SELECTION */
 
 .level-container {
-    /* prima: linear-gradient(#667eea, #764ba2) */
-    -fx-background-color: #1B3A57;/* piatto, mantiene la palette viola */
+    -fx-background-color: #1B3A57;
     -fx-padding: 30;
     -fx-spacing: 30;
     -fx-alignment: center;
@@ -319,9 +299,8 @@
 }
 .level-card:hover { -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.22), 14, 0, 0, 5); }
 
-/* prima: gradiente verde; ora verde pastello piatto */
 .level-card.completed {
-    -fx-background-color: #A8E6CF; /* tenue ma “colorato” */
+    -fx-background-color: #A8E6CF;
     -fx-border-color: #27AE60;
     -fx-border-width: 2;
 }
@@ -341,9 +320,7 @@
 .star.empty { -fx-fill: rgba(241, 196, 15, 0.35); }
 
 
-/* ================================
-   DIALOGHI E ALERT
-   ================================ */
+/* DIALOGHI E ALERT */
 
 .dialog-pane {
     -fx-background-color: white;
@@ -374,17 +351,13 @@
 }
 .dialog-button-secondary:hover { -fx-background-color: #95A5A6; }
 
-/* ================================
-   ANIMAZIONI
-   ================================ */
+/* ANIMAZIONI */
 
 .moving-from  { -fx-background-color: rgba(231, 76, 60, 0.25); }
 .moving-to    { -fx-background-color: rgba(39, 174, 96, 0.22); }
 .victory-animation { -fx-effect: dropshadow(gaussian, rgba(241, 196, 15, 0.55), 18, 0, 0, 0); }
 
-/* ================================
-   TOOLTIP
-   ================================ */
+/*TOOLTIP */
 
 .tooltip {
     -fx-background-color: rgba(44, 62, 80, 0.95);
@@ -396,9 +369,7 @@
     -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.22), 6, 0, 0, 2);
 }
 
-/* ================================
-   SCROLLBAR
-   ================================ */
+/* SCROLLBAR*/
 
 .scroll-pane { -fx-background-color: transparent; -fx-border-color: transparent; }
 .scroll-pane > .viewport { -fx-background-color: transparent; }
@@ -408,18 +379,14 @@
 .scroll-bar .thumb { -fx-background-color: rgba(46, 134, 193, 0.70); -fx-background-radius: 5; }
 .scroll-bar .thumb:hover { -fx-background-color: #2E86C1; }
 
-/* ================================
-   STATI SPECIALI
-   ================================ */
+/* STATI SPECIALI */
 
 .disabled { -fx-opacity: 0.6; }
 .loading  { -fx-effect: dropshadow(gaussian, rgba(46,134,193,0.40), 12, 0, 0, 0); }
 .success  { -fx-background-color: rgba(39, 174, 96, 0.18); -fx-border-color: #27AE60; -fx-border-width: 1; -fx-border-radius: 12; }
 .warning  { -fx-background-color: rgba(243, 156, 18, 0.18); -fx-border-color: #F39C12; -fx-border-width: 1; -fx-border-radius: 12; }
 .error    { -fx-background-color: rgba(231, 76, 60, 0.18); -fx-border-color: #E74C3C; -fx-border-width: 1; -fx-border-radius: 12; }
-/* ================================
-   STATUS PANEL - INFORMAZIONI DI GIOCO
-   ================================ */
+/* STATUS PANEL - INFORMAZIONI DI GIOCO */
 
 .status-panel {
     -fx-background-color: rgba(255, 255, 255, 0.15);

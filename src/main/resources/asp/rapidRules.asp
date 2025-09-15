@@ -1,21 +1,21 @@
 
-% --- Successor on positions (capacity 4 assumed: 0..3) ---
+% successore pos
 succ(0,1). succ(1,2). succ(2,3).
 
-% --- Colors from initial state ---
+% colori
 color(C) :- init_ball(_,_,C).
 
-% --- Initial state at step 0 ---
+% inizializzo stato ball allo step 0
 ball(T,P,C,0) :- init_ball(T,P,C), tube(T).
 
-% --- Step successor ---
+% step successivo
 next(S,S1) :- step(S), S1 = S + 1, step(S1).
 
-% --- Attivazione progressiva ---
+% step validi --> non andare oltre horizon
 active(0).
 active(S1) :- active(S), next(S,S1).
 
-% --- Tube state predicates ---
+% stat dei tubi
 has_ball(T,S) :- ball(T,_,_,S).
 empty(T,S) :- tube(T), active(S), not has_ball(T,S).
 nonempty(T,S) :- has_ball(T,S).
@@ -24,9 +24,9 @@ nonempty(T,S) :- has_ball(T,S).
 full(T,S) :- tube(T), active(S), #count{P : ball(T,P,_,S)} = 4.
 
 % pallina in cima
-higher(T,S,P) :- active(S), tube(T), pos(P), pos(P2), ball(T,P2,_,S), P2 > P.
-top_pos(T,S,P) :- active(S), tube(T), pos(P), ball(T,P,_,S), not higher(T,S,P).
-top_color(T,S,C) :- active(S), tube(T), top_pos(T,S,P), ball(T,P,C,S).
+higher(T,S,P) :- active(S), tube(T), pos(P), pos(P2), ball(T,P2,_,S), P2 > P. % esiste una pallina in pos p2
+top_pos(T,S,P) :- active(S), tube(T), pos(P), ball(T,P,_,S), not higher(T,S,P). % id. pallina in cima
+top_color(T,S,C) :- active(S), tube(T), top_pos(T,S,P), ball(T,P,C,S).  % colore pallina in cima
 
 % pre condizioni per spostare pallina
 canMove(F,T,S) :-
@@ -39,15 +39,15 @@ canMove(F,T,S) :-
     top_color(F,S,C), top_color(T,S,C).
 
 % scelta
-{ move(F,T,S) : canMove(F,T,S) } :- active(S), not goal(S).
+{ move(F,T,S) : canMove(F,T,S) } :- active(S), not goal(S). % eff. scelta tra le mosse consentite
 
 % solo una mossa per step
 :- step(S), #count{F,T : move(F,T,S)} > 1.
 
-% --- No immediate backtracking ---
+% non permettere di rispostare la palline
 :- move(A,B,S), next(S,S1), move(B,A,S1).
 
-% --- State transitions (only for active steps) ---
+%
 moved_from(F,P,S) :- move(F,_,S), top_pos(F,S,P).
 stay(T,P,C,S) :- active(S), ball(T,P,C,S), not moved_from(T,P,S).
 ball(T,P,C,S1) :- stay(T,P,C,S), next(S,S1).

@@ -12,9 +12,7 @@ import javafx.geometry.Insets;
 import it.unical.informatica.controller.GameEventHandler;
 import it.unical.informatica.controller.GamePreferences;
 
-/**
- * Vista per la selezione dei livelli
- */
+
 public class LevelSelectionView {
 
     private Scene scene;
@@ -23,7 +21,6 @@ public class LevelSelectionView {
     private final GameLevel currentDifficulty;
     private final GamePreferences preferences;
 
-    // Riferimenti agli elementi per il ridimensionamento
     private Text mainTitle;
     private Text difficultyTitle;
     private Text difficultySelectionTitle;
@@ -31,7 +28,6 @@ public class LevelSelectionView {
     private Text progressTitle;
     private Text progressText;
 
-    // Event handlers
     private GameEventHandler.LevelSelectionHandler onLevelSelected;
     private GameEventHandler.ActionHandler onBackToMenu;
     private GameEventHandler.LevelSelectionHandler onDifficultyChanged;
@@ -42,22 +38,18 @@ public class LevelSelectionView {
         createLevelSelectionScene();
     }
 
-    /**
-     * Crea la scena di selezione livelli
-     */
+
     private void createLevelSelectionScene() {
         mainContainer = new VBox();
         mainContainer.getStyleClass().add("level-container");
         mainContainer.setSpacing(20);
         mainContainer.setPadding(new Insets(15));
 
-        // Header con titolo e controlli
         createHeader();
 
         // Selezione difficoltà
         createDifficultySelector();
 
-        // Griglia dei livelli
         createLevelGrid();
 
         // Progress bar
@@ -66,7 +58,6 @@ public class LevelSelectionView {
         // Pulsanti di controllo
         createControlButtons();
 
-        // Wrappa tutto in uno ScrollPane
         scrollPane = new ScrollPane(mainContainer);
         scrollPane.setFitToWidth(true);
         scrollPane.setFitToHeight(true);
@@ -74,17 +65,13 @@ public class LevelSelectionView {
         scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scrollPane.getStyleClass().add("scroll-pane");
 
-        // Crea la scena
-        scene = new Scene(scrollPane, 600, 500);
+       scene = new Scene(scrollPane, 600, 500);
         scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
 
-        // Aggiungi listener per il ridimensionamento
         addResponsiveListeners();
     }
 
-    /**
-     * Aggiunge listener per rendere il layout responsive
-     */
+
     private void addResponsiveListeners() {
         scene.widthProperty().addListener((obs, oldVal, newVal) -> {
             double width = newVal.doubleValue();
@@ -96,44 +83,32 @@ public class LevelSelectionView {
             updateLayoutForHeight(height);
         });
 
-        // Imposta le dimensioni iniziali
         updateLayoutForWidth(scene.getWidth());
         updateLayoutForHeight(scene.getHeight());
     }
 
-    /**
-     * Aggiorna il layout in base alla larghezza
-     */
+
     private void updateLayoutForWidth(double width) {
-        // Aggiusta il padding in base alla larghezza
         double padding = Math.max(10, Math.min(30, width * 0.03));
         mainContainer.setPadding(new Insets(padding));
 
-        // Aggiorna le dimensioni dei font
         updateFontSizes(width);
     }
 
-    /**
-     * Aggiorna il layout in base all'altezza
-     */
+
     private void updateLayoutForHeight(double height) {
-        // Aggiusta lo spacing in base all'altezza
         double spacing = Math.max(10, Math.min(25, height * 0.035));
         mainContainer.setSpacing(spacing);
     }
 
-    /**
-     * Aggiorna le dimensioni dei font in base alla larghezza
-     */
+
     private void updateFontSizes(double width) {
-        // Calcola le dimensioni dei font responsive
         double titleSize = Math.max(24, Math.min(32, width * 0.04));
         double subtitleSize = Math.max(18, Math.min(24, width * 0.035));
         double normalSize = Math.max(14, Math.min(18, width * 0.025));
         double smallSize = Math.max(12, Math.min(16, width * 0.02));
         double tinySize = Math.max(10, Math.min(14, width * 0.015));
 
-        // Applica i font ai titoli principali
         if (mainTitle != null) {
             mainTitle.setStyle("-fx-font-size: " + titleSize + "px;");
         }
@@ -154,9 +129,7 @@ public class LevelSelectionView {
         }
     }
 
-    /**
-     * Crea l'header con titolo
-     */
+
     private void createHeader() {
         VBox headerContainer = new VBox();
         headerContainer.setAlignment(Pos.CENTER);
@@ -172,9 +145,7 @@ public class LevelSelectionView {
         mainContainer.getChildren().add(headerContainer);
     }
 
-    /**
-     * Crea il selettore di difficoltà
-     */
+
     private void createDifficultySelector() {
         VBox difficultySection = new VBox();
         difficultySection.setSpacing(10);
@@ -195,9 +166,7 @@ public class LevelSelectionView {
         mainContainer.getChildren().add(difficultySection);
     }
 
-    /**
-     * Crea un pulsante per la difficoltà
-     */
+
     private Button createDifficultyButton(GameLevel level) {
         Button button = new Button(level.getDisplayName());
         button.getStyleClass().add("control-button");
@@ -208,7 +177,6 @@ public class LevelSelectionView {
             button.setStyle("-fx-background-color: #FF5722; -fx-border-color: #D84315; -fx-border-width: 2px;");
         }
 
-        // Aggiungi statistiche
         double progress = preferences.getProgressForDifficulty(level);
         String progressText = String.format("%.0f%%", progress);
         button.setText(level.getDisplayName() + "\n" + progressText);
@@ -222,9 +190,7 @@ public class LevelSelectionView {
         return button;
     }
 
-    /**
-     * Crea la griglia dei livelli
-     */
+
     private void createLevelGrid() {
         VBox gridSection = new VBox();
         gridSection.setSpacing(15);
@@ -237,8 +203,7 @@ public class LevelSelectionView {
         levelGrid.setVgap(15);
         levelGrid.setPadding(new Insets(10));
 
-        // Crea le card per ogni livello
-        for (int level = 1; level <= 5; level++) {
+         for (int level = 1; level <= 5; level++) {
             VBox levelCard = createLevelCard(level);
             levelGrid.getChildren().add(levelCard);
         }
@@ -247,15 +212,12 @@ public class LevelSelectionView {
         mainContainer.getChildren().add(gridSection);
     }
 
-    /**
-     * Crea una card per un livello
-     */
+
     private VBox createLevelCard(int levelNumber) {
         VBox card = new VBox();
         card.setAlignment(Pos.CENTER);
         card.setSpacing(5);
 
-        // Dimensioni più grandi e proporzionate
         card.setPrefSize(140, 160);
         card.setMinSize(120, 140);
         card.setMaxSize(160, 180);
@@ -263,7 +225,6 @@ public class LevelSelectionView {
         boolean isCompleted = preferences.isLevelCompleted(currentDifficulty, levelNumber);
         boolean isUnlocked = preferences.isLevelUnlocked(currentDifficulty, levelNumber);
 
-        // Applica stili in base allo stato
         if (isCompleted) {
             card.getStyleClass().addAll("level-card", "completed");
         } else if (!isUnlocked) {
@@ -272,12 +233,10 @@ public class LevelSelectionView {
             card.getStyleClass().add("level-card");
         }
 
-        // Container per numero e icona nella parte superiore
         VBox topSection = new VBox();
         topSection.setAlignment(Pos.CENTER);
         topSection.setSpacing(8);
 
-        // Numero del livello più grande e ben visibile
         Text levelText = new Text(String.valueOf(levelNumber));
         levelText.getStyleClass().add("level-number");
         levelText.setStyle("-fx-font-size: 36px; -fx-font-weight: bold;");
@@ -293,7 +252,6 @@ public class LevelSelectionView {
 
 
 
-        // Sezione centrale per le stelle (solo se completato)
         HBox starsSection = new HBox();
         starsSection.setAlignment(Pos.CENTER);
         starsSection.setSpacing(3);
@@ -313,13 +271,11 @@ public class LevelSelectionView {
                 starsSection.getChildren().add(star);
             }
         } else {
-            // Placeholder per mantenere l'altezza uniforme
             Region spacer = new Region();
             spacer.setPrefHeight(20);
             starsSection.getChildren().add(spacer);
         }
 
-        // Sezione inferiore per il punteggio
         VBox bottomSection = new VBox();
         bottomSection.setAlignment(Pos.CENTER);
         bottomSection.setSpacing(2);
@@ -327,11 +283,9 @@ public class LevelSelectionView {
         if (isCompleted) {
             int bestMoves = preferences.getBestMoves(currentDifficulty, levelNumber);
 
-            // Etichetta "BEST"
             Text bestLabel = new Text("BEST");
             bestLabel.setStyle("-fx-font-size: 10px; -fx-font-weight: bold; -fx-fill: #7B8A8B;");
 
-            // Punteggio
             Text bestScore = new Text(String.valueOf(bestMoves));
             bestScore.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-fill: #2E86C1;");
 
@@ -346,10 +300,8 @@ public class LevelSelectionView {
             bottomSection.getChildren().add(playText);
         }
 
-        // Assembla tutti i componenti
         card.getChildren().addAll(topSection, starsSection, bottomSection);
 
-        // Event handler per il click
         if (isUnlocked) {
             card.setOnMouseClicked(e -> {
                 if (onLevelSelected != null) {
@@ -357,7 +309,6 @@ public class LevelSelectionView {
                 }
             });
 
-            // Effetto hover
             card.setOnMouseEntered(e -> {
                 card.setStyle(card.getStyle() + "-fx-scale-x: 1.05; -fx-scale-y: 1.05;");
             });
@@ -366,7 +317,6 @@ public class LevelSelectionView {
                 card.setStyle(card.getStyle().replace("-fx-scale-x: 1.05; -fx-scale-y: 1.05;", ""));
             });
 
-            // Tooltip con informazioni
             Tooltip tooltip = new Tooltip();
             if (isCompleted) {
                 tooltip.setText(String.format("Livello %d - Completato!\nMiglior punteggio: %d mosse\nStelle: %d/3",
@@ -379,7 +329,6 @@ public class LevelSelectionView {
             }
             Tooltip.install(card, tooltip);
         } else {
-            // Tooltip per livelli bloccati
             Tooltip tooltip = new Tooltip("Completa il livello precedente per sbloccare questo!");
             Tooltip.install(card, tooltip);
         }
@@ -387,9 +336,7 @@ public class LevelSelectionView {
         return card;
     }
 
-    /**
-     * Crea la sezione del progresso
-     */
+
     private void createProgressSection() {
         VBox progressSection = new VBox();
         progressSection.setSpacing(8);
@@ -413,9 +360,7 @@ public class LevelSelectionView {
         mainContainer.getChildren().add(progressSection);
     }
 
-    /**
-     * Conta i livelli completati per la difficoltà corrente
-     */
+
     private int countCompletedLevels() {
         int count = 0;
         for (int i = 1; i <= 5; i++) {
@@ -426,9 +371,7 @@ public class LevelSelectionView {
         return count;
     }
 
-    /**
-     * Crea i pulsanti di controllo
-     */
+
     private void createControlButtons() {
         FlowPane controlBox = new FlowPane();
         controlBox.setAlignment(Pos.CENTER);
@@ -436,7 +379,7 @@ public class LevelSelectionView {
         controlBox.setVgap(10);
         controlBox.setPadding(new Insets(15, 0, 0, 0));
 
-        Button backButton = new Button("🔙 Torna al Menu");
+        Button backButton = new Button("Torna al Menu");
         backButton.getStyleClass().addAll("control-button", "secondary-button");
         backButton.setPrefWidth(140);
         backButton.setOnAction(e -> {
@@ -451,7 +394,7 @@ public class LevelSelectionView {
             }
         });
 
-        Button resetButton = new Button("🔄 Reset Progresso");
+        Button resetButton = new Button("Reset Progresso");
         resetButton.getStyleClass().addAll("control-button", "danger-button");
         resetButton.setPrefWidth(140);
         resetButton.setOnAction(e -> showResetConfirmation());
@@ -460,9 +403,7 @@ public class LevelSelectionView {
         mainContainer.getChildren().add(controlBox);
     }
 
-    /**
-     * Mostra la conferma per il reset del progresso
-     */
+
     private void showResetConfirmation() {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Reset Progresso");
@@ -478,20 +419,15 @@ public class LevelSelectionView {
         alert.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
                 preferences.resetProgress(currentDifficulty);
-                // Ricarica la vista
                 recreateScene();
             }
         });
     }
 
-    /**
-     * Ricrea la scena dopo modifiche
-     */
+
     private void recreateScene() {
-        // Salva i riferimenti dei listener prima di ricreare
         mainContainer.getChildren().clear();
 
-        // Resetta i riferimenti degli elementi
         mainTitle = null;
         difficultyTitle = null;
         difficultySelectionTitle = null;
@@ -499,19 +435,15 @@ public class LevelSelectionView {
         progressTitle = null;
         progressText = null;
 
-        // Ricrea tutti i componenti
         createHeader();
         createDifficultySelector();
         createLevelGrid();
         createProgressSection();
         createControlButtons();
 
-        // Riapplica il responsive design
         updateLayoutForWidth(scene.getWidth());
         updateLayoutForHeight(scene.getHeight());
     }
-
-    // Getters e Setters per gli event handlers
 
     public Scene getScene() {
         return scene;

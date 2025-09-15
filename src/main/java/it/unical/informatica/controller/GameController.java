@@ -372,9 +372,7 @@ public class GameController {
         }
     }
 
-    /**
-     * Passa al livello successivo
-     */
+
     private void nextLevel() {
         try {
             if (levelNumber < gameLevel.getMaxLevels()) {

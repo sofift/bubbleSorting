@@ -4,12 +4,8 @@ import it.unical.informatica.model.GameLevel;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.prefs.BackingStoreException;
 import java.util.prefs.Preferences;
 
-/**
- * Gestisce le preferenze del gioco e il progresso del giocatore
- */
 public class GamePreferences {
 
     private static final String LEVEL_COMPLETED_PREFIX = "level_completed_";
@@ -74,7 +70,6 @@ public class GamePreferences {
             int stars = calculateStars(level, moves);
             starsCache.put(key, Math.max(stars, getStars(level, levelNumber)));
 
-            // Salva nelle preferenze
             preferences.putBoolean(LEVEL_COMPLETED_PREFIX + key, true);
             preferences.putInt(LEVEL_MOVES_PREFIX + key, moves);
             preferences.putInt(LEVEL_STARS_PREFIX + key, getStars(level, levelNumber));
@@ -100,7 +95,6 @@ public class GamePreferences {
     }
 
     private int calculateStars(GameLevel level, int moves) {
-        // Calcolo basato sulla difficoltà e numero ottimale di mosse
         int optimalMoves = getOptimalMoves(level);
 
         if (moves <= optimalMoves) {
@@ -114,9 +108,7 @@ public class GamePreferences {
         }
     }
 
-    /**
-     * Ottiene il numero ottimale di mosse per un livello (stima)
-     */
+
     private int getOptimalMoves(GameLevel level) {
         return switch (level) {
             case EASY -> 15;
@@ -124,9 +116,7 @@ public class GamePreferences {
         };
     }
 
-    /**
-     * Verifica se un livello è sbloccato
-     */
+
     public boolean isLevelUnlocked(GameLevel level, int levelNumber) {
        if (levelNumber == 1) {
             return true;
@@ -135,9 +125,7 @@ public class GamePreferences {
        return isLevelCompleted(level, levelNumber - 1);
     }
 
-    /**
-     * Calcola il progresso totale per una difficoltà
-     */
+
     public double getProgressForDifficulty(GameLevel level) {
         int completedLevels = 0;
         for (int i = 1; i <= 5; i++) {
@@ -148,9 +136,7 @@ public class GamePreferences {
         return (double) completedLevels / 5.0 * 100.0;
     }
 
-    /**
-     * Calcola il progresso totale del gioco
-     */
+
     public double getTotalProgress() {
         int totalCompleted = 0;
         int totalLevels = GameLevel.values().length * 5;
@@ -187,28 +173,7 @@ public class GamePreferences {
         return preferences.getBoolean(SHOW_HINTS, true);
     }
 
-    public void setShowHints(boolean show) {
-        preferences.putBoolean(SHOW_HINTS, show);
-    }
 
-    /**
-     * Resetta tutto il progresso del gioco
-     */
-    public void resetAllProgress() {
-        try {
-            preferences.clear();
-            completionCache.clear();
-            movesCache.clear();
-            starsCache.clear();
-            loadCache();
-        } catch (Exception e) {
-            System.err.println("Errore nel reset del progresso: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Resetta il progresso per una specifica difficoltà
-     */
     public void resetProgress(GameLevel level) {
         for (int i = 1; i <= 5; i++) {
             String key = getLevelKey(level, i);
@@ -223,9 +188,7 @@ public class GamePreferences {
         }
     }
 
-    /**
-     * Ottiene statistiche dettagliate per il debug
-     */
+
     public Map<String, Object> getDebugInfo() {
         Map<String, Object> info = new HashMap<>();
 

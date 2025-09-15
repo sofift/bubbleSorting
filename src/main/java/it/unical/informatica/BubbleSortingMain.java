@@ -18,7 +18,7 @@ public class BubbleSortingMain extends Application {
 
         primaryStage.setMinWidth(1000);
         primaryStage.setMinHeight(600);
-        // Inizializza il controller del menu
+
         MenuController menuController = new MenuController(primaryStage);
         menuController.showMenu();
 

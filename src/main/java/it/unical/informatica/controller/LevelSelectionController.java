@@ -44,7 +44,6 @@ public class LevelSelectionController {
             }
         });
 
-        // Handler per tornare al menu
         levelSelectionView.setOnBackToMenu(() -> {
             try {
                 this.returnToMenu();

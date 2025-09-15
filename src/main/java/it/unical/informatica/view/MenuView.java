@@ -15,9 +15,7 @@ import javafx.scene.effect.DropShadow;
 import javafx.scene.paint.Color;
 import it.unical.informatica.controller.GameEventHandler;
 
-/**
- * Vista del menu principale con design moderno ispirato a CrazyGames
- */
+
 public class MenuView {
 
     private Scene scene;
@@ -35,17 +33,15 @@ public class MenuView {
     }
 
     private void createMenuScene() {
-        // Container principale con layout migliorato
         mainContainer = new VBox();
         mainContainer.getStyleClass().add("menu-container");
         mainContainer.setAlignment(Pos.CENTER);
         mainContainer.setSpacing(30);
         mainContainer.setPadding(new Insets(30));
 
-        // Sezioni del menu
         createTitle();
         createMenuButtons();
-        // Crea la scena con dimensioni moderne
+
         scene = new Scene(mainContainer, 1000, 600);
         scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
     }
@@ -55,20 +51,17 @@ public class MenuView {
         titleSection.setAlignment(Pos.CENTER);
         titleSection.setSpacing(15);
 
-        // Titolo principale con effetto moderno
         Text title = new Text("Bubble Sorting Game");
         title.getStyleClass().add("menu-title");
         title.setFont(Font.font("System", FontWeight.BOLD, 52));
         title.setFill(Color.WHITE);
 
-        // Effetto ombra per il titolo
         DropShadow shadow = new DropShadow();
         shadow.setColor(Color.rgb(0, 0, 0, 0.4));
         shadow.setRadius(10);
         shadow.setOffsetY(4);
         title.setEffect(shadow);
 
-        // Sottotitolo elegante
         Text subtitle = new Text("Ordina le palline colorate con l'intelligenza artificiale");
         subtitle.getStyleClass().add("menu-subtitle");
         subtitle.setFont(Font.font("System", FontWeight.NORMAL, 18));
@@ -84,12 +77,10 @@ public class MenuView {
         buttonSection.setSpacing(20);
         buttonSection.setPadding(new Insets(30, 0, 30, 0));
 
-        // Pulsante principale - Nuova Partita
-        Button newGameButton = createPrimaryButton("🎮 Nuova Partita");
+        Button newGameButton = createPrimaryButton("Nuova Partita");
         newGameButton.setOnAction(e -> showDifficultySelection());
 
-        // Pulsanti secondari
-        Button rulesButton = createSecondaryButton("📖 Regole del Gioco");
+        Button rulesButton = createSecondaryButton("Regole del Gioco");
         rulesButton.setOnAction(e -> {
             if (onRulesSelected != null) {
                 try {
@@ -101,8 +92,7 @@ public class MenuView {
         });
 
 
-        // Pulsante uscita con stile diverso
-        Button exitButton = createDangerButton("🚪 Esci");
+        Button exitButton = createDangerButton("Esci");
         exitButton.setOnAction(e -> {
             if (onExitSelected != null) {
                 try {
@@ -153,7 +143,6 @@ public class MenuView {
         dialog.setTitle("Seleziona Difficoltà");
         dialog.setHeaderText("Scegli il livello di difficoltà per iniziare a giocare");
 
-        // Container del dialog con design moderno
         VBox content = new VBox();
         content.setSpacing(25);
         content.setPadding(new Insets(30));
@@ -171,12 +160,10 @@ public class MenuView {
         dialog.getDialogPane().getStylesheets().add(
                 getClass().getResource("/css/style.css").toExternalForm());
 
-        // Pulsanti con stile moderno
-        ButtonType playButtonType = new ButtonType("🎮 Gioca!", ButtonBar.ButtonData.OK_DONE);
-        ButtonType cancelButtonType = new ButtonType("❌ Annulla", ButtonBar.ButtonData.CANCEL_CLOSE);
+        ButtonType playButtonType = new ButtonType("Gioca!", ButtonBar.ButtonData.OK_DONE);
+        ButtonType cancelButtonType = new ButtonType("Annulla", ButtonBar.ButtonData.CANCEL_CLOSE);
         dialog.getDialogPane().getButtonTypes().addAll(playButtonType, cancelButtonType);
 
-        // Logica dei pulsanti
         Button playButton = (Button) dialog.getDialogPane().lookupButton(playButtonType);
         playButton.setDisable(true);
         playButton.getStyleClass().add("dialog-button-primary");
@@ -230,7 +217,6 @@ public class MenuView {
 
         card.getChildren().addAll(radioButton, levelName, levelDetails, levelDescription);
 
-        // Rendi cliccabile tutta la card
         card.setOnMouseClicked(e -> radioButton.setSelected(true));
 
         return card;
@@ -324,8 +310,6 @@ public class MenuView {
         alert.showAndWait();
     }
 
-    // Getters e Setters per i gestori di eventi
-
     public Scene getScene() {
         return scene;
     }
@@ -340,10 +324,6 @@ public class MenuView {
 
     public void setOnRulesSelected(GameEventHandler.ActionHandler handler) {
         this.onRulesSelected = handler;
-    }
-
-    public void setOnAboutSelected(GameEventHandler.ActionHandler handler) {
-        this.onAboutSelected = handler;
     }
 
     public void setOnSettingsSelected(GameEventHandler.ActionHandler handler) {
