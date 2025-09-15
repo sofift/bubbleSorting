@@ -13,7 +13,7 @@ import java.util.*;
 public class AspSolver {
     private static final String DLV2_PATH = "libs/dlv-2.1.2-win64.exe";
 
-    private static final String ASP_RULES_FILE = "src/main/resources/asp/rapidRules.asp";
+    private static final String ASP_RULES_FILE = "src/main/resources/asp/fast.asp";
 
     private Handler handler;
     private boolean initialized = false;

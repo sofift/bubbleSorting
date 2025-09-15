@@ -17,8 +17,6 @@ public class LevelLoader {
 
 
     private void loadLevelsFile() {
-        System.out.println("Tentativo di caricamento file: " + LEVELS_FILE);
-
         try (InputStream inputStream = getClass().getResourceAsStream(LEVELS_FILE)) {
             if (inputStream == null) {
                 System.err.println("File non trovato: " + LEVELS_FILE);

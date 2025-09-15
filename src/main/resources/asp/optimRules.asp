@@ -1,17 +1,8 @@
+% OTTIMIZZATO con aggregati e choice rules
 
-% =========================
-%  RULES (planner ASP) - OTTIMIZZATO con aggregati e choice rules
-%  Mantenendo la logica originale
-% =========================
 
 % --- Successor on positions (capacity
 
-% NOTE: pos/step/tube/init_ball facts are expected from Java.
-% Example domains (from Java):
-%   pos(0). pos(1). pos(2). pos(3).
-%   step(0). step(1). ... step(H).
-%   tube(1)..tube(N).
-%   init_ball(T,P,C).
 
 succ(0,1). succ(1,2). succ(2,3).
 % --- Colors from initial state ---

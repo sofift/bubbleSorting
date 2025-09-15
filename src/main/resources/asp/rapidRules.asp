@@ -76,6 +76,9 @@ goal(S) :- active(S), #count{T : tube(T), not good(T,S)} = 0.
 exists_goal :- goal(S).
 :- not exists_goal.
 
+:~ move(F,T,S). [1@1,F,T,S]
+
+
 % --- Projection ---
 show_move(F,T,S) :- move(F,T,S).
 #show show_move/3.
