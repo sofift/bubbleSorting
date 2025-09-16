@@ -13,7 +13,7 @@ import java.util.*;
 public class AspSolver {
     private static final String DLV2_PATH = "libs/dlv-2.1.2-win64.exe";
 
-    private static final String ASP_RULES_FILE = "src/main/resources/asp/fast.asp";
+    private static final String ASP_RULES_FILE = "src/main/resources/asp/rapidRules.asp";
 
     private Handler handler;
     private boolean initialized = false;
@@ -102,9 +102,7 @@ public class AspSolver {
     }
 
     private void addGameFacts(final InputProgram facts, final GameState gameState, final int horizon) throws Exception {
-        // capacity(4).
         final int capacity = gameState.getLevel().getTubeCapacity();
-        facts.addObjectInput(new CapacityFact(capacity));
 
         // tube(1..N).
         final int numTubes = gameState.getTubes().size();
@@ -146,8 +144,6 @@ public class AspSolver {
         if ("Medio".equals(diff)) return 25;
         return 20; // fallback
     }
-
-
 
     private List<ShowMove> extractOptimalMovesSorted(Output output) throws InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException {
         List<ShowMove> moves = new ArrayList<>();
